@@ -6,7 +6,7 @@
 
 **Architecture:** Create a `:measurement` Android library with pure metric calculations, Android connectivity/radio adapters, network-bound OkHttp probes, and a coroutine-based `MeasurementEngine`. Add a minimal `:app` host solely to set target SDK 36 and compile/test the public library contract; it contains no mapping UI or persistence.
 
-**Tech Stack:** Kotlin 2.3.21, Android Gradle Plugin 8.13.2, Gradle 8.13, JDK 17, Android API 36, coroutines 1.11.0, OkHttp 5.5.0, JUnit 4, AndroidX Test.
+**Tech Stack:** Kotlin 2.3.21, Android Gradle Plugin 8.13.2, Gradle 8.13, JDK 17, Android API 36, coroutines 1.11.0, OkHttp 5.4.0, JUnit 4, AndroidX Test.
 
 **Spec:** `docs/superpowers/specs/2026-10-06-heatnet-member-1-measurement-design.md`
 
@@ -58,16 +58,16 @@
 
 **Interfaces:** The app module depends on `project(":measurement")`; the library exports package `com.heatnet.measurement`. In Android Studio's Gradle settings, download/select JDK 17 for this Gradle 8.13 build; the installed bundled JBR is Java 25 and the external terminal currently finds Java 8. Do not commit a machine-specific JDK path or `local.properties`.
 
-- [ ] **Step 1: Pin the build toolchain and modules** to AGP `8.13.2`, Gradle wrapper `8.13`, Kotlin Gradle plugin `2.3.21`, and Java/Kotlin target 17. Add `:app` and `:measurement`; set `compileSdk = 36`, `minSdk = 36`, and app `targetSdk = 36`. Put dependency versions in `gradle/libs.versions.toml`; include coroutines `1.11.0`, OkHttp and MockWebServer3 `5.5.0`, JUnit `4.13.2`, and AndroidX Test runner/rules `1.7.0`, core `1.7.0`, and ext-junit `1.3.0`.
-- [ ] **Step 2: Declare the measurement permissions** in the library manifest: `INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, `ACCESS_FINE_LOCATION`, and `READ_BASIC_PHONE_STATE`. Set `testInstrumentationRunner` to `androidx.test.runner.AndroidJUnitRunner` for the host and library.
-- [ ] **Step 3: Ignore generated/local files** in `.gitignore`: `.gradle/`, `.idea/`, `.kotlin/`, `local.properties`, and all module `build/` directories.
-- [ ] **Step 4: Set up the Gradle runtime and wrapper.** In Android Studio, set **Settings → Build, Execution, Deployment → Build Tools → Gradle → Gradle JDK** to a downloaded JDK 17. AGP 8.13 needs JDK 17, and Gradle 8.13 cannot run on the installed JBR 25. With JDK 17, use the official Gradle 8.13 binary distribution and run `gradle-8.13/bin/gradle.bat wrapper --gradle-version 8.13 --distribution-type bin` from the repository root. Do not commit the downloaded distribution or machine-specific JDK path.
-- [ ] **Step 5: Build both empty modules** with `.\gradlew.bat :app:assembleDebug :measurement:assembleDebug`.
+- [x] **Step 1: Pin the build toolchain and modules** to AGP `8.13.2`, Gradle wrapper `8.13`, Kotlin Gradle plugin `2.3.21`, and Java/Kotlin target 17. Add `:app` and `:measurement`; set `compileSdk = 36`, `minSdk = 36`, and app `targetSdk = 36`. Put dependency versions in `gradle/libs.versions.toml`; include coroutines `1.11.0`, OkHttp and MockWebServer3 `5.4.0`, JUnit `4.13.2`, and AndroidX Test runner/rules `1.7.0`, core `1.7.0`, and ext-junit `1.3.0`.
+- [x] **Step 2: Declare the measurement permissions** in the library manifest: `INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, `ACCESS_FINE_LOCATION`, and `READ_BASIC_PHONE_STATE`. Set `testInstrumentationRunner` to `androidx.test.runner.AndroidJUnitRunner` for the host and library.
+- [x] **Step 3: Ignore generated/local files** in `.gitignore`: `.gradle/`, `.idea/`, `.kotlin/`, `local.properties`, and all module `build/` directories.
+- [x] **Step 4: Set up the Gradle runtime and wrapper.** In Android Studio, use **Settings → Build, Execution, Deployment → Build Tools → Gradle → Gradle JDK** with JDK 17. This checkout sets the IDE macro `GRADLE_LOCAL_JAVA_HOME` to the local JDK 17 in ignored `.gradle/config.properties`; the SDK path also stays in ignored `local.properties`. With JDK 17, the official Gradle 8.13 binary distribution generated the wrapper. Do not commit the downloaded distribution or machine-specific JDK/SDK paths.
+- [x] **Step 5: Build both empty modules** with `.\gradlew.bat :app:assembleDebug :measurement:assembleDebug`.
 
 Run the wrapper's `--version` and module assembly commands from Android Studio's Terminal using **Run highlighted command using the IDE**, or from a regular terminal with `JAVA_HOME` pointing to the downloaded JDK 17.
 Expected: Gradle 8.13 reports JDK 17 and both debug artifacts assemble with SDK 36.
 
-- [ ] **Step 6: Commit** as `build: bootstrap HeatNet measurement project`.
+- [x] **Step 6: Commit** as `build: bootstrap HeatNet measurement project`.
 
 ### Task 2: Define the contract and pure metric calculations
 
@@ -157,8 +157,9 @@ Use `Float?` for throughput, latency, jitter, and loss fields to match the share
 
 - [AGP 8.13 release notes and API 36/JDK 17 compatibility](https://developer.android.com/build/releases/agp-8-13-0-release-notes)
 - [Kotlin Gradle plugin compatibility table](https://kotlinlang.org/docs/gradle-configure-project.html)
+- [Kotlin compiler options DSL](https://kotlinlang.org/docs/gradle-compiler-options.html)
 - [Android Gradle JDK selection](https://developer.android.com/build/jdks)
 - [Android `Network` socket factory and DNS](https://developer.android.com/reference/android/net/Network)
 - [Android callback location information](https://developer.android.com/reference/android/net/ConnectivityManager.NetworkCallback)
 - [AndroidX Test dependency versions](https://developer.android.com/jetpack/androidx/releases/test)
-- [OkHttp 5.5.0 artifact](https://central.sonatype.com/artifact/com.squareup.okhttp3/okhttp)
+- [OkHttp 5.4.0 artifact](https://central.sonatype.com/artifact/com.squareup.okhttp3/okhttp/5.4.0)
