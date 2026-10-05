@@ -1,6 +1,6 @@
 # HeatNet Member 1: Measurement Engine Design
 
-**Status:** Conversational design approved; awaiting written-spec review.
+**Status:** Conversational design and written spec approved; implementation plan ready for review.
 **Scope:** Member 1's Android networking and radio-measurement work.
 
 ## Purpose and agreed constraints
@@ -35,7 +35,7 @@ Use `ConnectionType { WIFI, MOBILE }`. `MeasurementResult` includes:
 - nullable `signalDbm`, `linkSpeedMbps`, `wifiBand`, `wifiChannel`, `bssid`, and `networkType`
 - a list of typed issues, such as permission denied, unsupported transport, network changed, timeout, or unavailable radio data
 
-For a truthful saved result, the shared `Reading` contract must carry `packetLossMethod`; otherwise the UI cannot distinguish ICMP packet loss from HTTP request failures after save/compare. `wifiBand` must accept `"6"` in addition to `"2.4"` and `"5"`. Preserve these changes when Member 2 and Member 3 integrate. Do not edit the supplied PRD as part of this module task; share this contract with the team through the repository.
+For a truthful saved result, the shared `Reading` contract must carry `packetLossMethod`; otherwise the UI cannot distinguish ICMP packet loss from HTTP request failures after save/compare. `wifiBand` must accept `"6"` in addition to `"2.4"` and `"5"`. Preserve these changes when Member 2 and Member 3 integrate. The current checkout contains no `Reading` model yet, so this design records the integration contract without inventing a storage model. Do not edit the supplied PRD as part of this module task; share this contract with the team through the repository.
 
 ## Session and measurement flow
 
