@@ -71,6 +71,25 @@ class CellularRadioReaderTest {
     }
 
     @Test
+    fun labelsNrAdvancedSeparatelyFromLteAndNrNsa() {
+        val advanced = CellularDisplayOverride.entries.firstOrNull { it.name == "NR_ADVANCED" }
+        assertTrue("the display override model must preserve NR Advanced", advanced != null)
+        val source = FakeCellularRadioSource(
+            activeSubscriptionId = 1,
+            data = CellularRadioData(
+                dataTechnology = CellularTechnology.LTE,
+                displayOverride = advanced ?: CellularDisplayOverride.NR_NSA,
+                signalSamples = listOf(CellularSignalSample(CellularTechnology.LTE, -88)),
+            ),
+        )
+
+        val snapshot = CellularRadioReader.fromSource(source).read()
+
+        assertEquals("NR-ADVANCED", snapshot.networkType)
+        assertEquals(-88, snapshot.signalDbm)
+    }
+
+    @Test
     fun missingActiveSubscriptionReturnsUnavailableRadio() {
         val snapshot = CellularRadioReader.fromSource(
             FakeCellularRadioSource(activeSubscriptionId = null, data = null),

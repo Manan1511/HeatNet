@@ -17,7 +17,6 @@ import com.heatnet.measurement.probe.ThroughputProbe
 import com.heatnet.measurement.probe.TransferDirection
 import com.heatnet.measurement.radio.CellularRadioReader
 import com.heatnet.measurement.radio.RadioSnapshot
-import com.heatnet.measurement.radio.WifiRadioReader
 import kotlinx.coroutines.flow.StateFlow
 
 /** Injectable platform and measurement boundaries used by one [MeasurementEngine]. */
@@ -25,7 +24,6 @@ data class MeasurementDependencies(
     val connectionState: StateFlow<ConnectionSnapshot>,
     val ensureMonitoringStarted: () -> Unit = {},
     val permissionCheck: (ConnectionType) -> PermissionOutcome,
-    val readWifiRadio: (Network) -> RadioSnapshot,
     val readCellularRadio: () -> RadioSnapshot,
     val measureThroughput: suspend (Network, TransferDirection, Long, Long) -> ThroughputMeasurement,
     val measureLatency: suspend (Network, MeasurementConfig, Long) -> LatencyMeasurement,
@@ -46,17 +44,15 @@ data class MeasurementDependencies(
         ): MeasurementDependencies {
             val appContext = context.applicationContext
             val permissionGate = PermissionGate(appContext)
-            val wifiReader = WifiRadioReader(appContext)
             val cellularReader = CellularRadioReader(appContext)
             val throughputProbe = ThroughputProbe(config)
             val latencyProbe = LatencyProbe()
-            val packetLossProbe = PacketLossProbe()
+            val packetLossProbe = PacketLossProbe(appContext)
 
             return MeasurementDependencies(
                 connectionState = connectionMonitor.state,
                 ensureMonitoringStarted = connectionMonitor::start,
                 permissionCheck = permissionGate::check,
-                readWifiRadio = wifiReader::read,
                 readCellularRadio = cellularReader::read,
                 measureThroughput = { network, direction, budget, deadline ->
                     throughputProbe.measure(network, direction, budget, deadline)

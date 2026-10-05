@@ -27,6 +27,8 @@ class IcmpProbeTest {
         assertEquals(25f, result.lossPct!!, 0.001f)
         assertEquals("speed.cloudflare.com", process.host)
         assertEquals(20, process.count)
+        assertTrue("ICMP must leave time for the approved HTTP fallback", process.timeoutMillis!! <= 5_000L)
+        assertEquals("lo", process.interfaceName)
     }
 
     @Test
@@ -66,10 +68,14 @@ class IcmpProbeTest {
 
     private class FakePingProcess(private val execution: PingExecution) : PingProcess {
         var host: String? = null
+        var interfaceName: String? = null
         var count: Int? = null
-        override fun run(host: String, count: Int, intervalMillis: Int, timeoutMillis: Long): PingExecution {
-            this.host = host
+        var timeoutMillis: Long? = null
+        override fun run(route: IcmpRoute, count: Int, intervalMillis: Int, timeoutMillis: Long): PingExecution {
+            this.host = route.hostAddress
+            this.interfaceName = route.interfaceName
             this.count = count
+            this.timeoutMillis = timeoutMillis
             return execution
         }
     }
@@ -78,7 +84,7 @@ class IcmpProbeTest {
         val started = CountDownLatch(1)
         val interrupted = CountDownLatch(1)
 
-        override fun run(host: String, count: Int, intervalMillis: Int, timeoutMillis: Long): PingExecution {
+        override fun run(route: IcmpRoute, count: Int, intervalMillis: Int, timeoutMillis: Long): PingExecution {
             started.countDown()
             try {
                 CountDownLatch(1).await()

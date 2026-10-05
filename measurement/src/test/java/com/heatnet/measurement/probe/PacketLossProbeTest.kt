@@ -100,6 +100,6 @@ class PacketLossProbeTest {
     private fun deadline() = System.nanoTime() + 10_000_000_000L
 
     private class FakePingProcess(private val execution: PingExecution) : PingProcess {
-        override fun run(host: String, count: Int, intervalMillis: Int, timeoutMillis: Long) = execution
+        override fun run(route: IcmpRoute, count: Int, intervalMillis: Int, timeoutMillis: Long) = execution
     }
 }

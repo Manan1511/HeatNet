@@ -11,5 +11,8 @@ class NetworkBoundHttpClientFactory {
         .socketFactory(network.socketFactory)
         .dns(Dns { hostname -> network.getAllByName(hostname).toList() })
         .cookieJar(CookieJar.NO_COOKIES)
+        .followRedirects(false)
+        .followSslRedirects(false)
+        .retryOnConnectionFailure(false)
         .build()
 }

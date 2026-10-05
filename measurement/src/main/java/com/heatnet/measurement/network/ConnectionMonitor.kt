@@ -5,6 +5,7 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import com.heatnet.measurement.model.ConnectionType
+import com.heatnet.measurement.radio.WifiRadioReader
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,15 +15,17 @@ class ConnectionMonitor(context: Context) {
     val state: StateFlow<ConnectionSnapshot> = mutableState.asStateFlow()
     private val connectivityManager =
         context.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    private val wifiRadioReader = WifiRadioReader()
 
     private val core = DefaultNetworkMonitorCore(
-        registrar = AndroidNetworkCallbackRegistrar(connectivityManager),
+        registrar = AndroidNetworkCallbackRegistrar(connectivityManager, wifiRadioReader),
         onObservation = { observation ->
             mutableState.value = ConnectionSnapshot(
                 network = observation.network,
                 connectionType = TransportClassifier.classify(observation.transports),
                 hasValidatedInternet = observation.hasValidatedInternet,
                 hasTransportObservation = observation.hasTransportObservation,
+                wifiRadioSnapshot = observation.wifiRadioSnapshot,
             )
         },
     )
@@ -48,17 +51,21 @@ class ConnectionMonitor(context: Context) {
             mutableState.value = ConnectionSnapshot(network, null, false, hasTransportObservation = false)
             return
         }
+        val current = mutableState.value
+        val wifiRadioSnapshot = current.wifiRadioSnapshot.takeIf { sameNetworkHandle(current.network, network) }
         mutableState.value = ConnectionSnapshot(
             network = network,
             connectionType = TransportClassifier.classify(capabilities.toHeatNetTransports()),
             hasValidatedInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED),
             hasTransportObservation = true,
+            wifiRadioSnapshot = wifiRadioSnapshot,
         )
     }
 }
 
 private class AndroidNetworkCallbackRegistrar(
     private val connectivityManager: ConnectivityManager,
+    private val wifiRadioReader: WifiRadioReader,
 ) : NetworkCallbackRegistrar<Network> {
     private val lock = Any()
     private val callbacks = java.util.IdentityHashMap<NetworkEventsCallback<Network>, ConnectivityManager.NetworkCallback>()
@@ -81,6 +88,11 @@ private class AndroidNetworkCallbackRegistrar(
                         hasValidatedInternet = networkCapabilities.hasCapability(
                             NetworkCapabilities.NET_CAPABILITY_VALIDATED,
                         ),
+                        wifiRadioSnapshot = if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                            wifiRadioReader.read(networkCapabilities.transportInfo as? android.net.wifi.WifiInfo)
+                        } else {
+                            null
+                        },
                     )
                 }
 

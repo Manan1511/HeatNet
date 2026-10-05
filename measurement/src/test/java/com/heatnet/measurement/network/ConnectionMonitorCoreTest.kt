@@ -1,5 +1,6 @@
 package com.heatnet.measurement.network
 
+import com.heatnet.measurement.radio.RadioSnapshot
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -31,6 +32,25 @@ class ConnectionMonitorCoreTest {
         assertNull(snapshots.last().network)
         assertTrue(snapshots.last().transports.isEmpty())
         assertFalse(snapshots.last().hasValidatedInternet)
+    }
+
+    @Test
+    fun retainsWifiRadioSnapshotFromThePermissionAwareCapabilitiesCallback() {
+        val registrar = FakeNetworkCallbackRegistrar()
+        val snapshots = mutableListOf<NetworkObservation<String>>()
+        val monitor = DefaultNetworkMonitorCore(registrar, snapshots::add)
+        val radio = RadioSnapshot(signalDbm = -48, linkSpeedMbps = 600, wifiBand = "5", wifiChannel = 36)
+
+        monitor.start()
+        registrar.callback!!.onAvailable("wifi-1")
+        registrar.callback!!.onCapabilitiesChanged(
+            "wifi-1",
+            setOf(NetworkTransport.WIFI),
+            hasValidatedInternet = true,
+            wifiRadioSnapshot = radio,
+        )
+
+        assertEquals(radio, snapshots.last().wifiRadioSnapshot)
     }
 
     @Test

@@ -270,7 +270,22 @@ class MeasurementEngineTest {
     }
 
     private fun snapshot(network: Network?, type: ConnectionType?, validated: Boolean) =
-        ConnectionSnapshot(network, type, validated)
+        ConnectionSnapshot(
+            network,
+            type,
+            validated,
+            wifiRadioSnapshot = if (type == ConnectionType.WIFI) {
+                RadioSnapshot(
+                    signalDbm = -54,
+                    linkSpeedMbps = 866,
+                    wifiBand = "6",
+                    wifiChannel = 1,
+                    bssid = "00:11:22:33:44:55",
+                )
+            } else {
+                null
+            },
+        )
 
     private fun fakeNetwork(): Network {
         val unsafeClass = Class.forName("sun.misc.Unsafe")
@@ -283,13 +298,6 @@ class MeasurementEngineTest {
     private class Harness(
         initialSnapshot: ConnectionSnapshot,
         private val permission: (ConnectionType) -> PermissionOutcome = { PermissionOutcome.GRANTED },
-        private val radioWifi: RadioSnapshot = RadioSnapshot(
-            signalDbm = -54,
-            linkSpeedMbps = 866,
-            wifiBand = "6",
-            wifiChannel = 1,
-            bssid = "00:11:22:33:44:55",
-        ),
         private val radioMobile: RadioSnapshot = RadioSnapshot(signalDbm = -91, networkType = "NR"),
         private val latency: () -> LatencyMeasurement = {
             LatencyMeasurement(12f, 2f, attemptedRequests = 10, successfulRequests = 10)
@@ -321,7 +329,6 @@ class MeasurementEngineTest {
         fun dependencies(): MeasurementDependencies = MeasurementDependencies(
             connectionState = state,
             permissionCheck = permission,
-            readWifiRadio = { radioWifi },
             readCellularRadio = { radioMobile },
             measureThroughput = { network, direction, budget, deadline ->
                 capturedNetworks += network

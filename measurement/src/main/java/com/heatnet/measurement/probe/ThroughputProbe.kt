@@ -53,13 +53,19 @@ class ThroughputProbe private constructor(
             return ThroughputMeasurement(null, 0L, 0L, isPartial = false)
         }
 
+        val singleAttemptClient = client.newBuilder()
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .retryOnConnectionFailure(false)
+            .build()
+
         val streamCount = minOf(config.parallelStreams.coerceIn(1, MAX_PARALLEL_STREAMS), effectiveBudget.toIntOrMax())
         val allocations = allocateBudget(effectiveBudget, streamCount)
         val startedAt = clock.nowNanos()
         val outcomes = coroutineScope {
             allocations.map { allocation ->
                 async(Dispatchers.IO) {
-                    transferStream(client, direction, allocation, deadlineNanos)
+                    transferStream(singleAttemptClient, direction, allocation, deadlineNanos)
                 }
             }.awaitAll()
         }
@@ -69,7 +75,11 @@ class ThroughputProbe private constructor(
         val partial = payloadBytes < effectiveBudget || outcomes.any { it.partial } || issues.isNotEmpty()
 
         return ThroughputMeasurement(
-            megabitsPerSecond = calculatePayloadMbps(payloadBytes, elapsedNanos),
+            megabitsPerSecond = if (outcomes.sumOf { it.successfulResponses } > 0) {
+                calculatePayloadMbps(payloadBytes, elapsedNanos)
+            } else {
+                null
+            },
             payloadBytes = payloadBytes,
             budgetBytes = effectiveBudget,
             isPartial = partial,
@@ -85,6 +95,7 @@ class ThroughputProbe private constructor(
         deadlineNanos: Long,
     ): StreamOutcome {
         val uploadedBytes = AtomicLong(0L)
+        val downloadedBytes = AtomicLong(0L)
         val successfulResponses = AtomicInteger(0)
         return try {
             val builder = Request.Builder()
@@ -110,7 +121,7 @@ class ThroughputProbe private constructor(
                     ResponseOutcome(0L, successful = false, bodyEndedEarly = true)
                 } else {
                     val body = response.body
-                    val read = body.byteStream().readAtMost(allocation, deadlineNanos)
+                    val read = body.byteStream().readAtMost(allocation, deadlineNanos, downloadedBytes)
                     ResponseOutcome(read.bytesRead, successful = true, bodyEndedEarly = read.endedBeforeLimit)
                 }
             }
@@ -132,7 +143,9 @@ class ThroughputProbe private constructor(
         } catch (error: Exception) {
             val issue = error.toMeasurementIssue(System.nanoTime(), deadlineNanos)
             StreamOutcome(
-                payloadBytes = uploadedBytes.get().coerceAtMost(allocation),
+                payloadBytes = (if (direction == TransferDirection.UPLOAD) uploadedBytes else downloadedBytes)
+                    .get()
+                    .coerceAtMost(allocation),
                 partial = true,
                 successfulResponses = successfulResponses.get(),
                 issues = listOf(issue),
@@ -164,6 +177,8 @@ private class FixedPayloadRequestBody(
     private val deadlineNanos: Long,
     private val bytesWritten: AtomicLong,
 ) : RequestBody() {
+    override fun isOneShot() = true
+
     override fun contentType() = BINARY_MEDIA_TYPE
 
     override fun contentLength(): Long = byteCount
@@ -181,7 +196,11 @@ private class FixedPayloadRequestBody(
     }
 }
 
-private fun java.io.InputStream.readAtMost(limit: Long, deadlineNanos: Long): BodyRead {
+private fun java.io.InputStream.readAtMost(
+    limit: Long,
+    deadlineNanos: Long,
+    bytesReceived: AtomicLong,
+): BodyRead {
     val buffer = ByteArray(TRANSFER_CHUNK_BYTES)
     var bytesRead = 0L
     while (bytesRead < limit) {
@@ -191,6 +210,7 @@ private fun java.io.InputStream.readAtMost(limit: Long, deadlineNanos: Long): Bo
         if (count == -1) return BodyRead(bytesRead, endedBeforeLimit = true)
         if (count == 0) continue
         bytesRead += count
+        bytesReceived.addAndGet(count.toLong())
     }
     return BodyRead(bytesRead, endedBeforeLimit = false)
 }

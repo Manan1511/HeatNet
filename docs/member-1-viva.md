@@ -2,7 +2,7 @@
 
 ## A short explanation
 
-“I built HeatNet’s Android measurement library in Kotlin. It captures the active Wi-Fi or mobile `Network`, reads the radio fields Android makes available, and measures throughput, HTTP latency, jitter, and connection loss. HTTP requests stay bound to the captured network. Each result reports its status and issues, so partial or unavailable values are not mistaken for real measurements.”
+“I built HeatNet’s Android measurement library in Kotlin. It captures the active Wi-Fi or mobile `Network`, reads Wi-Fi radio details from Android’s location-aware network callback, and measures throughput, HTTP latency, jitter, and connection loss. HTTP requests stay bound to the captured network. Each result reports its status and issues, so partial or unavailable values are not mistaken for real measurements.”
 
 ## What each measurement means
 
@@ -28,7 +28,7 @@ HeatNet sends ten zero-byte HTTP GET requests to the configured latency endpoint
 
 ### Connection loss
 
-HeatNet first attempts twenty ICMP echo probes using Android’s `ping` executable. If ICMP cannot run or receives no replies, the app may use HTTP fallback probes only when an earlier HTTP request succeeded.
+HeatNet requests up to twenty ICMP echo probes using Android’s `ping` executable, bound to the captured network’s interface and resolved through that network. The process has a short cap so HTTP fallback can still run within the overall deadline. If ICMP cannot run or receives no replies, the app may use HTTP fallback probes only when an earlier HTTP request succeeded.
 
 Both methods calculate a percentage from probes that actually started:
 
@@ -50,7 +50,7 @@ Requests that never started because the deadline expired are excluded from the d
 - **Wi-Fi link speed:** Android’s receive PHY link speed in Mbps. It describes the negotiated Wi-Fi radio link, not measured internet download speed.
 - **Wi-Fi band and channel:** Derived from the active connection’s frequency. HeatNet preserves bands as `"2.4"`, `"5"`, or `"6"`, with a channel number such as channel 1 at 5955 MHz on 6 GHz.
 - **BSSID:** The connected access point identifier when Android exposes it. A masked or unavailable value is returned as null.
-- **Mobile network type:** The active data network type, such as LTE or NR. When Android reports LTE with an NR NSA display override, HeatNet labels it `NR-NSA`. Signal strength is associated only with a matching radio technology.
+- **Mobile network type:** The active data network type, such as LTE or NR. When Android reports LTE with an NR NSA or NR Advanced display override, HeatNet preserves that distinction as `NR-NSA` or `NR-ADVANCED`. Signal strength is associated only with a matching radio technology.
 
 Unavailable and redacted values stay null and carry an issue. The library does not substitute placeholders or choose an unrelated cell’s signal.
 

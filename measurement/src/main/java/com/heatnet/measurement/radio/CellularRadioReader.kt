@@ -34,6 +34,7 @@ internal enum class CellularTechnology {
 internal enum class CellularDisplayOverride {
     NONE,
     NR_NSA,
+    NR_ADVANCED,
 }
 
 internal data class CellularSignalSample(
@@ -74,7 +75,11 @@ class CellularRadioReader private constructor(
             CellularTechnology.CDMA -> "CDMA"
             CellularTechnology.WCDMA -> "WCDMA"
             CellularTechnology.TD_SCDMA -> "TD-SCDMA"
-            CellularTechnology.LTE -> if (radio.displayOverride == CellularDisplayOverride.NR_NSA) "NR-NSA" else "LTE"
+            CellularTechnology.LTE -> when (radio.displayOverride) {
+                CellularDisplayOverride.NR_NSA -> "NR-NSA"
+                CellularDisplayOverride.NR_ADVANCED -> "NR-ADVANCED"
+                CellularDisplayOverride.NONE -> "LTE"
+            }
             CellularTechnology.NR -> "NR"
             CellularTechnology.UNKNOWN -> null
         }
@@ -120,7 +125,7 @@ private class AndroidCellularRadioSource(context: Context) : CellularRadioSource
                 dataTechnology = networkType.toCellularTechnology(),
                 signalSamples = signalStrength.toSamples(),
                 displayOverride = if (networkType == TelephonyManager.NETWORK_TYPE_LTE) {
-                    manager.readNrNsaDisplayOverride()
+                    manager.readNrDisplayOverride()
                 } else {
                     CellularDisplayOverride.NONE
                 },
@@ -168,15 +173,19 @@ private fun SignalStrength?.toSamples(): List<CellularSignalSample> {
     }
 }
 
-private fun TelephonyManager.readNrNsaDisplayOverride(): CellularDisplayOverride {
+private fun TelephonyManager.readNrDisplayOverride(): CellularDisplayOverride {
     val received = CountDownLatch(1)
     val override = java.util.concurrent.atomic.AtomicReference(CellularDisplayOverride.NONE)
     val executor = Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "HeatNet-display-info") }
     val callback = object : TelephonyCallback(), TelephonyCallback.DisplayInfoListener {
         override fun onDisplayInfoChanged(telephonyDisplayInfo: TelephonyDisplayInfo) {
-            if (telephonyDisplayInfo.overrideNetworkType == TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NR_NSA) {
-                override.set(CellularDisplayOverride.NR_NSA)
-            }
+            override.set(
+                when (telephonyDisplayInfo.overrideNetworkType) {
+                    TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NR_NSA -> CellularDisplayOverride.NR_NSA
+                    TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NR_ADVANCED -> CellularDisplayOverride.NR_ADVANCED
+                    else -> CellularDisplayOverride.NONE
+                },
+            )
             received.countDown()
         }
     }

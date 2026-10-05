@@ -1,5 +1,6 @@
 package com.heatnet.measurement.probe
 
+import android.content.Context
 import android.net.Network
 import com.heatnet.measurement.model.IssueCode
 import com.heatnet.measurement.model.MeasurementConfig
@@ -20,6 +21,11 @@ class PacketLossProbe internal constructor(
 ) {
     constructor() : this(IcmpProbe(), HttpLossProbe())
 
+    constructor(context: Context) : this(
+        IcmpProbe(context.applicationContext),
+        HttpLossProbe(),
+    )
+
     internal constructor(icmpProbe: IcmpProbe) : this(icmpProbe, HttpLossProbe())
 
     suspend fun measure(
@@ -27,24 +33,35 @@ class PacketLossProbe internal constructor(
         config: MeasurementConfig,
         httpReachable: Boolean,
         deadlineNanos: Long,
-    ): PacketLossMeasurement = measureInternal(config, httpReachable, deadlineNanos) {
-        httpLossProbe.measure(network, config, deadlineNanos)
-    }
+    ): PacketLossMeasurement = measureInternal(
+        config = config,
+        httpReachable = httpReachable,
+        deadlineNanos = deadlineNanos,
+        icmp = { icmpProbe.measure(network, config, deadlineNanos) },
+        fallback = { httpLossProbe.measure(network, config, deadlineNanos) },
+    )
 
     internal suspend fun measureWithFallback(
         config: MeasurementConfig,
         httpReachable: Boolean,
         deadlineNanos: Long,
         fallback: suspend () -> PacketLossMeasurement,
-    ): PacketLossMeasurement = measureInternal(config, httpReachable, deadlineNanos, fallback)
+    ): PacketLossMeasurement = measureInternal(
+        config = config,
+        httpReachable = httpReachable,
+        deadlineNanos = deadlineNanos,
+        icmp = { icmpProbe.measure(config, deadlineNanos) },
+        fallback = fallback,
+    )
 
     private suspend fun measureInternal(
         config: MeasurementConfig,
         httpReachable: Boolean,
         deadlineNanos: Long,
+        icmp: suspend () -> PacketLossMeasurement,
         fallback: suspend () -> PacketLossMeasurement,
     ): PacketLossMeasurement {
-        val icmp = icmpProbe.measure(config, deadlineNanos)
+        val icmp = icmp()
         if (icmp.method == PacketLossMethod.ICMP && icmp.successfulProbes > 0) return icmp
 
         if (!httpReachable) {

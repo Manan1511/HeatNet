@@ -5,38 +5,27 @@ import java.nio.charset.StandardCharsets
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
-data class PingExecution(
+internal data class PingExecution(
     val output: String,
     val exitCode: Int?,
     val started: Boolean,
     val timedOut: Boolean = false,
 )
 
-interface PingProcess {
-    fun run(host: String, count: Int, intervalMillis: Int, timeoutMillis: Long): PingExecution
+internal interface PingProcess {
+    fun run(route: IcmpRoute, count: Int, intervalMillis: Int, timeoutMillis: Long): PingExecution
 }
 
-class AndroidPingProcess : PingProcess {
-    override fun run(host: String, count: Int, intervalMillis: Int, timeoutMillis: Long): PingExecution {
+internal class AndroidPingProcess : PingProcess {
+    override fun run(route: IcmpRoute, count: Int, intervalMillis: Int, timeoutMillis: Long): PingExecution {
         if (count <= 0 || timeoutMillis <= 0L) {
             return PingExecution("", exitCode = null, started = false)
         }
 
-        val intervalSeconds = String.format(
-            java.util.Locale.US,
-            "%.3f",
-            intervalMillis.coerceAtLeast(100) / 1_000.0,
-        )
-        val deadlineSeconds = ((timeoutMillis + 999L) / MILLIS_PER_SECOND).coerceAtLeast(1L)
         val process = try {
-            ProcessBuilder(
-                "ping",
-                "-c", count.toString(),
-                "-i", intervalSeconds,
-                "-w", deadlineSeconds.toString(),
-                "-W", "1",
-                host,
-            ).redirectErrorStream(true).start()
+            ProcessBuilder(*buildPingCommand(route, count, intervalMillis).toTypedArray())
+                .redirectErrorStream(true)
+                .start()
         } catch (_: IOException) {
             return PingExecution("", exitCode = null, started = false)
         } catch (_: SecurityException) {
@@ -70,6 +59,25 @@ class AndroidPingProcess : PingProcess {
     }
 }
 
-private const val MILLIS_PER_SECOND = 1_000L
+internal fun buildPingCommand(
+    route: IcmpRoute,
+    count: Int,
+    intervalMillis: Int,
+): List<String> {
+    val intervalSeconds = String.format(
+        java.util.Locale.US,
+        "%.3f",
+        intervalMillis.coerceAtLeast(100) / 1_000.0,
+    )
+    return listOf(
+        "ping",
+        "-I", route.interfaceName,
+        "-c", count.toString(),
+        "-i", intervalSeconds,
+        "-W", "1",
+        route.hostAddress,
+    )
+}
+
 private const val PROCESS_STOP_WAIT_MILLIS = 250L
 private const val OUTPUT_DRAIN_WAIT_MILLIS = 500L

@@ -1,9 +1,5 @@
 package com.heatnet.measurement.radio
 
-import android.content.Context
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
 import android.net.wifi.WifiInfo
 import com.heatnet.measurement.model.IssueCode
 import com.heatnet.measurement.model.MeasurementIssue
@@ -16,16 +12,20 @@ internal data class WifiRadioData(
     val bssid: String?,
 )
 
-internal fun interface WifiRadioSource {
-    fun read(network: Network): WifiRadioData?
-}
-
-class WifiRadioReader private constructor(
-    private val source: WifiRadioSource,
-) {
-    constructor(context: Context) : this(AndroidWifiRadioSource(context.applicationContext))
-
-    fun read(network: Network): RadioSnapshot = WifiRadioSnapshotMapper.map(source.read(network))
+/** Maps the location-aware [WifiInfo] delivered with a default-network capabilities callback. */
+class WifiRadioReader {
+    fun read(callbackWifiInfo: WifiInfo?): RadioSnapshot = WifiRadioSnapshotMapper.map(
+        runCatching {
+            callbackWifiInfo?.let { info ->
+                WifiRadioData(
+                    rssiDbm = info.rssi,
+                    receiveLinkSpeedMbps = info.rxLinkSpeedMbps,
+                    frequencyMhz = info.frequency,
+                    bssid = info.bssid,
+                )
+            }
+        }.getOrNull(),
+    )
 
     companion object {
         const val INVALID_RSSI = -127
@@ -71,20 +71,4 @@ internal object WifiRadioSnapshotMapper {
             issues = issues,
         )
     }
-}
-
-private class AndroidWifiRadioSource(context: Context) : WifiRadioSource {
-    private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-
-    override fun read(network: Network): WifiRadioData? = runCatching {
-        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return null
-        if (!capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) return null
-        val wifiInfo = capabilities.transportInfo as? WifiInfo ?: return null
-        WifiRadioData(
-            rssiDbm = wifiInfo.rssi,
-            receiveLinkSpeedMbps = wifiInfo.rxLinkSpeedMbps,
-            frequencyMhz = wifiInfo.frequency,
-            bssid = wifiInfo.bssid,
-        )
-    }.getOrNull()
 }

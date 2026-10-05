@@ -9,6 +9,7 @@ import mockwebserver3.RecordedRequest
 import okhttp3.OkHttpClient
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
@@ -118,8 +119,71 @@ class ThroughputProbeTest {
 
             assertEquals(0L, result.payloadBytes)
             assertEquals(0, result.successfulStreams)
+            assertNull("an HTTP failure is not a zero-speed measurement", result.megabitsPerSecond)
             assertTrue(result.isPartial)
             assertTrue(result.issues.any { it.code.name == "ENDPOINT_FAILURE" })
+        } finally {
+            server.close()
+        }
+    }
+
+    @Test
+    fun uploadRedirectDoesNotReplayPayloadOrExceedItsBudget() = runBlocking {
+        val server = MockWebServer()
+        server.enqueue(MockResponse.Builder().code(307).addHeader("Location", "/replay").build())
+        server.enqueue(MockResponse())
+        server.start()
+        try {
+            val config = MeasurementConfig(
+                uploadUrl = server.url("/upload").toString(),
+                maxBytesPerDirection = 100,
+                parallelStreams = 1,
+            )
+            val result = ThroughputProbe(config, clock = LatencyProbeTest.StepProbeClock()).measureWithClient(
+                OkHttpClient(),
+                TransferDirection.UPLOAD,
+                100,
+                deadline(),
+            )
+
+            val firstRequest = server.takeRequest()
+            val replayedRequest = server.takeRequest(250, TimeUnit.MILLISECONDS)
+            assertEquals(100L, firstRequest.body?.size?.toLong())
+            assertNull("a redirect must not cause the upload body to be sent again", replayedRequest)
+            assertTrue(result.payloadBytes <= 100L)
+        } finally {
+            server.close()
+        }
+    }
+
+    @Test
+    fun downloadFailureAfterReceivingBytesPreservesThePartialPayload() = runBlocking {
+        val server = MockWebServer()
+        server.enqueue(
+            MockResponse.Builder()
+                .body("x".repeat(20))
+                .headers(okhttp3.Headers.Builder().add("Content-Length", "50").build())
+                .build(),
+        )
+        server.enqueue(
+            MockResponse.Builder()
+                .body("y".repeat(20))
+                .headers(okhttp3.Headers.Builder().add("Content-Length", "50").build())
+                .build(),
+        )
+        server.start()
+        try {
+            val config = MeasurementConfig(downloadUrl = server.url("/down").toString(), parallelStreams = 2)
+            val result = ThroughputProbe(config, clock = LatencyProbeTest.StepProbeClock()).measureWithClient(
+                OkHttpClient(),
+                TransferDirection.DOWNLOAD,
+                100,
+                System.nanoTime() + 500_000_000L,
+            )
+
+            assertEquals(40L, result.payloadBytes)
+            assertEquals(2, result.successfulStreams)
+            assertTrue(result.isPartial)
         } finally {
             server.close()
         }

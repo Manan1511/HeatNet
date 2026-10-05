@@ -56,7 +56,6 @@ class MeasurementManifestIntegrationTest {
         val dependencies = MeasurementDependencies(
             connectionState = MutableStateFlow(ConnectionSnapshot(null, null, hasValidatedInternet = false)),
             permissionCheck = { PermissionOutcome.GRANTED },
-            readWifiRadio = { RadioSnapshot() },
             readCellularRadio = { RadioSnapshot() },
             measureThroughput = { _, _, budget, _ -> ThroughputMeasurement(null, 0L, budget, isPartial = true) },
             measureLatency = { _, _: MeasurementConfig, _ -> LatencyMeasurement(null, null, 0, 0) },

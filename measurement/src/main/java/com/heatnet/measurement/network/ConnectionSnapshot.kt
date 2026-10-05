@@ -2,12 +2,14 @@ package com.heatnet.measurement.network
 
 import android.net.Network
 import com.heatnet.measurement.model.ConnectionType
+import com.heatnet.measurement.radio.RadioSnapshot
 
 data class ConnectionSnapshot(
     val network: Network?,
     val connectionType: ConnectionType?,
     val hasValidatedInternet: Boolean,
     val hasTransportObservation: Boolean = true,
+    internal val wifiRadioSnapshot: RadioSnapshot? = null,
 ) {
     // Network's Android stub throws from equals/hashCode in local JVM tests. Keep production
     // handle equality while making snapshots safe for the module's mockable Android unit tests.
@@ -17,7 +19,8 @@ data class ConnectionSnapshot(
         return sameNetworkHandle(network, other.network) &&
             connectionType == other.connectionType &&
             hasValidatedInternet == other.hasValidatedInternet &&
-            hasTransportObservation == other.hasTransportObservation
+            hasTransportObservation == other.hasTransportObservation &&
+            wifiRadioSnapshot == other.wifiRadioSnapshot
     }
 
     override fun hashCode(): Int {
@@ -25,6 +28,7 @@ data class ConnectionSnapshot(
         result = 31 * result + (connectionType?.hashCode() ?: 0)
         result = 31 * result + hasValidatedInternet.hashCode()
         result = 31 * result + hasTransportObservation.hashCode()
+        result = 31 * result + (wifiRadioSnapshot?.hashCode() ?: 0)
         return result
     }
 }
