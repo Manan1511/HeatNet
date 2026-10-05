@@ -113,10 +113,10 @@ Use `Float?` for throughput, latency, jitter, and loss fields to match the share
 
 **Interfaces:** `LatencyProbe.measure(network, config, deadlineNanos): LatencyMeasurement`; `ThroughputProbe.measure(network, direction, byteBudget, deadlineNanos): ThroughputMeasurement`. The network client receives the exact captured `Network` and cannot use the default route.
 
-- [ ] **Step 1: Write failing tests** including `ThroughputProbeTest.respectsSharedDirectionBudget` and `ThroughputProbeTest.budgetTruncationIsPartial`; cover ten zero-byte latency GETs, mean/sample jitter from successes, two concurrent streams in each direction, aggregate direction budget exactly 4 MiB, reading budget no more than 8 MiB, partial body accounting, HTTP failure issues, and request cancellation closing the response.
-- [ ] **Step 2: Run** `.\gradlew.bat :measurement:testDebugUnitTest` and confirm the probe tests fail.
-- [ ] **Step 3: Implement** an OkHttp client using `Network.getSocketFactory()` and network-specific `Network.getAllByName()` DNS; adapt calls to cancellable suspend operations. Stream and count payload bytes, cap each direction at 4 MiB across both streams, issue exactly ten latency requests, and calculate Mbps from payload bytes and monotonic elapsed time. Keep configured Cloudflare URLs replaceable.
-- [ ] **Step 4: Run** `.\gradlew.bat :measurement:testDebugUnitTest` and confirm byte, latency, error, and cancellation tests pass.
+- [x] **Step 1: Write failing tests** including `ThroughputProbeTest.respectsSharedDirectionBudget` and `ThroughputProbeTest.budgetTruncationIsPartial`; cover ten zero-byte latency GETs, mean/sample jitter from successes, two concurrent streams in each direction, aggregate direction budget exactly 4 MiB, reading budget no more than 8 MiB, partial body accounting, HTTP failure issues, and request cancellation closing the response.
+- [x] **Step 2: Run** `.\gradlew.bat :measurement:testDebugUnitTest` and confirm the probe tests fail.
+- [x] **Step 3: Implement** an OkHttp client using `Network.getSocketFactory()` and network-specific `Network.getAllByName()` DNS; adapt calls to cancellable suspend operations. Stream and count payload bytes, cap each direction at 4 MiB across both streams, issue exactly ten latency requests, and calculate Mbps from payload bytes and monotonic elapsed time. Keep configured Cloudflare URLs replaceable.
+- [x] **Step 4: Run** `.\gradlew.bat :measurement:testDebugUnitTest :measurement:connectedDebugAndroidTest` and confirm byte, latency, error, route-binding, and cancellation tests pass.
 - [ ] **Step 5: Commit** as `feat(measurement): measure bounded latency and throughput`.
 
 ### Task 6: Implement ICMP parsing and the labeled HTTP loss fallback
