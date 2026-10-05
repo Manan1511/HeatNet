@@ -77,11 +77,11 @@ Expected: Gradle 8.13 reports JDK 17 and both debug artifacts assemble with SDK 
 
 Use `Float?` for throughput, latency, jitter, and loss fields to match the shared `Reading`; use `Int?` for dBm, link speed, and channel, `String?` for band/BSSID/network type, `Long` for the epoch timestamp, and `List<MeasurementIssue>` for issues. `MeasurementConfig` is immutable and defaults to the three approved Cloudflare URLs, `icmpHost = "speed.cloudflare.com"`, two streams, 4 MiB per direction, 10,000 ms overall timeout, ten latency samples, twenty ICMP probes, and twenty HTTP fallback probes. `MeasurementIssue` is `(code: IssueCode, detail: String?)`; codes are `PERMISSION_DENIED`, `UNSUPPORTED_TRANSPORT`, `TRANSPORT_MISMATCH`, `NETWORK_CHANGED`, `NO_INTERNET`, `TIMEOUT`, `ENDPOINT_FAILURE`, `ICMP_UNAVAILABLE`, `RADIO_UNAVAILABLE`, and `FIELD_REDACTED`.
 
-- [ ] **Step 1: Write failing tests** named `calculatesPayloadMbps`, `returnsNullForNonPositiveDuration`, `computesMeanAndSampleJitter`, `returnsNullWithoutSuccessfulLatencySamples`, `usesAttemptedProbeDenominator`, and `maps24FiveAndSixGhzChannels`. Assert 1,000,000 bytes over 1 second is 8 Mbps; latencies `[10, 12, 14]` yield mean 12 ms and sample jitter 2 ms; 1 failure of 5 attempts is 20%; zero attempts is null; 2412 MHz maps to band `"2.4"`/channel 1, 5180 to `"5"`/36, and 5955 to `"6"`/1.
-- [ ] **Step 2: Run** `.\gradlew.bat :measurement:testDebugUnitTest` and confirm those tests fail because the calculation types are not implemented.
-- [ ] **Step 3: Implement** the data types and pure calculations. Use monotonic nanoseconds for durations; use only successful latency samples; return null for undefined values; map unknown frequencies to null.
-- [ ] **Step 4: Run** `.\gradlew.bat :measurement:testDebugUnitTest` and confirm the named tests pass.
-- [ ] **Step 5: Commit** as `feat(measurement): define result contract and metric math`.
+- [x] **Step 1: Write failing tests** named `calculatesPayloadMbps`, `returnsNullForNonPositiveDuration`, `computesMeanAndSampleJitter`, `returnsNullWithoutSuccessfulLatencySamples`, `usesAttemptedProbeDenominator`, and `maps24FiveAndSixGhzChannels`. Assert 1,000,000 bytes over 1 second is 8 Mbps; latencies `[10, 12, 14]` yield mean 12 ms and sample jitter 2 ms; 1 failure of 5 attempts is 20%; zero attempts is null; 2412 MHz maps to band `"2.4"`/channel 1, 5180 to `"5"`/36, and 5955 to `"6"`/1.
+- [x] **Step 2: Run** `.\gradlew.bat :measurement:testDebugUnitTest` and confirm those tests fail because the calculation types are not implemented.
+- [x] **Step 3: Implement** the data types and pure calculations. Use monotonic nanoseconds for durations; use only successful latency samples; return null for undefined values; map unknown frequencies to null.
+- [x] **Step 4: Run** `.\gradlew.bat :measurement:testDebugUnitTest` and confirm the named tests pass.
+- [x] **Step 5: Commit** as `feat(measurement): define result contract and metric math`.
 
 ### Task 3: Classify and monitor the active network
 
