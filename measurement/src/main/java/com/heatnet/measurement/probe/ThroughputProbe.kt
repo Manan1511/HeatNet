@@ -16,6 +16,7 @@ import okhttp3.Request
 import okhttp3.RequestBody
 import okio.BufferedSink
 import java.net.SocketTimeoutException
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
 class ThroughputProbe private constructor(
@@ -73,6 +74,7 @@ class ThroughputProbe private constructor(
             budgetBytes = effectiveBudget,
             isPartial = partial,
             issues = issues,
+            successfulStreams = outcomes.sumOf { it.successfulResponses },
         )
     }
 
@@ -83,6 +85,7 @@ class ThroughputProbe private constructor(
         deadlineNanos: Long,
     ): StreamOutcome {
         val uploadedBytes = AtomicLong(0L)
+        val successfulResponses = AtomicInteger(0)
         return try {
             val builder = Request.Builder()
             val request = when (direction) {
@@ -96,6 +99,7 @@ class ThroughputProbe private constructor(
                     .build()
             }
             val responseOutcome = client.newCall(request).awaitResponse(deadlineNanos) { response ->
+                if (response.isSuccessful) successfulResponses.incrementAndGet()
                 if (direction == TransferDirection.UPLOAD) {
                     ResponseOutcome(
                         payloadBytes = uploadedBytes.get(),
@@ -120,6 +124,7 @@ class ThroughputProbe private constructor(
             StreamOutcome(
                 payloadBytes = responseOutcome.payloadBytes.coerceAtMost(allocation),
                 partial = responseOutcome.bodyEndedEarly || !responseOutcome.successful,
+                successfulResponses = successfulResponses.get(),
                 issues = issues,
             )
         } catch (cancelled: CancellationException) {
@@ -129,6 +134,7 @@ class ThroughputProbe private constructor(
             StreamOutcome(
                 payloadBytes = uploadedBytes.get().coerceAtMost(allocation),
                 partial = true,
+                successfulResponses = successfulResponses.get(),
                 issues = listOf(issue),
             )
         }
@@ -144,6 +150,7 @@ private data class ResponseOutcome(
 private data class StreamOutcome(
     val payloadBytes: Long,
     val partial: Boolean,
+    val successfulResponses: Int,
     val issues: List<MeasurementIssue>,
 )
 

@@ -10,25 +10,51 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class ConnectionMonitor(context: Context) {
-    private val mutableState = MutableStateFlow(ConnectionSnapshot(null, null, false))
+    private val mutableState = MutableStateFlow(ConnectionSnapshot(null, null, false, hasTransportObservation = false))
     val state: StateFlow<ConnectionSnapshot> = mutableState.asStateFlow()
+    private val connectivityManager =
+        context.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
     private val core = DefaultNetworkMonitorCore(
-        registrar = AndroidNetworkCallbackRegistrar(
-            context.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager,
-        ),
+        registrar = AndroidNetworkCallbackRegistrar(connectivityManager),
         onObservation = { observation ->
             mutableState.value = ConnectionSnapshot(
                 network = observation.network,
                 connectionType = TransportClassifier.classify(observation.transports),
                 hasValidatedInternet = observation.hasValidatedInternet,
+                hasTransportObservation = observation.hasTransportObservation,
             )
         },
     )
 
-    fun start() = core.start()
+    fun start() {
+        core.start()
+        refreshActiveDefaultNetwork()
+    }
 
-    fun stop() = core.stop()
+    fun stop() {
+        core.stop()
+        mutableState.value = ConnectionSnapshot(null, null, false, hasTransportObservation = true)
+    }
+
+    private fun refreshActiveDefaultNetwork() {
+        val network = runCatching { connectivityManager.activeNetwork }.getOrNull()
+        if (network == null) {
+            mutableState.value = ConnectionSnapshot(null, null, false, hasTransportObservation = true)
+            return
+        }
+        val capabilities = runCatching { connectivityManager.getNetworkCapabilities(network) }.getOrNull()
+        if (capabilities == null) {
+            mutableState.value = ConnectionSnapshot(network, null, false, hasTransportObservation = false)
+            return
+        }
+        mutableState.value = ConnectionSnapshot(
+            network = network,
+            connectionType = TransportClassifier.classify(capabilities.toHeatNetTransports()),
+            hasValidatedInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED),
+            hasTransportObservation = true,
+        )
+    }
 }
 
 private class AndroidNetworkCallbackRegistrar(

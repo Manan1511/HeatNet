@@ -16,11 +16,13 @@ class ConnectionMonitorCoreTest {
         monitor.start()
         val callback = registrar.callback!!
         callback.onAvailable("wifi-1")
+        assertFalse(snapshots.last().hasTransportObservation)
         callback.onCapabilitiesChanged("wifi-1", setOf(NetworkTransport.WIFI), hasValidatedInternet = true)
 
         assertEquals("wifi-1", snapshots.last().network)
         assertEquals(setOf(NetworkTransport.WIFI), snapshots.last().transports)
         assertTrue(snapshots.last().hasValidatedInternet)
+        assertTrue(snapshots.last().hasTransportObservation)
 
         callback.onCapabilitiesChanged("wifi-1", setOf(NetworkTransport.WIFI), hasValidatedInternet = false)
         assertFalse(snapshots.last().hasValidatedInternet)

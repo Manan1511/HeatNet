@@ -4,6 +4,7 @@ internal data class NetworkObservation<N>(
     val network: N?,
     val transports: Set<NetworkTransport>,
     val hasValidatedInternet: Boolean,
+    val hasTransportObservation: Boolean = false,
 )
 
 internal interface NetworkEventsCallback<N> {
@@ -31,6 +32,7 @@ internal class DefaultNetworkMonitorCore<N>(
     private var activeNetwork: N? = null
     private var transports: Set<NetworkTransport> = emptySet()
     private var hasValidatedInternet = false
+    private var hasTransportObservation = false
 
     fun start() {
         synchronized(lock) {
@@ -38,10 +40,13 @@ internal class DefaultNetworkMonitorCore<N>(
 
             val callback = object : NetworkEventsCallback<N> {
                 override fun onAvailable(network: N) = updateForCurrentCallback(this) {
-                    activeNetwork = network
-                    transports = emptySet()
-                    hasValidatedInternet = false
-                    publish()
+                    if (activeNetwork != network || !hasTransportObservation) {
+                        activeNetwork = network
+                        transports = emptySet()
+                        hasValidatedInternet = false
+                        hasTransportObservation = false
+                        publish()
+                    }
                 }
 
                 override fun onCapabilitiesChanged(
@@ -52,6 +57,7 @@ internal class DefaultNetworkMonitorCore<N>(
                     if (network == activeNetwork) {
                         this@DefaultNetworkMonitorCore.transports = transports.toSet()
                         this@DefaultNetworkMonitorCore.hasValidatedInternet = hasValidatedInternet
+                        this@DefaultNetworkMonitorCore.hasTransportObservation = true
                         publish()
                     }
                 }
@@ -61,6 +67,7 @@ internal class DefaultNetworkMonitorCore<N>(
                         activeNetwork = null
                         transports = emptySet()
                         hasValidatedInternet = false
+                        hasTransportObservation = false
                         publish()
                     }
                 }
@@ -83,6 +90,7 @@ internal class DefaultNetworkMonitorCore<N>(
             activeNetwork = null
             transports = emptySet()
             hasValidatedInternet = false
+            hasTransportObservation = false
             try {
                 registrar.unregister(callback)
             } finally {
@@ -101,6 +109,6 @@ internal class DefaultNetworkMonitorCore<N>(
     }
 
     private fun publish() {
-        onObservation(NetworkObservation(activeNetwork, transports, hasValidatedInternet))
+        onObservation(NetworkObservation(activeNetwork, transports, hasValidatedInternet, hasTransportObservation))
     }
 }

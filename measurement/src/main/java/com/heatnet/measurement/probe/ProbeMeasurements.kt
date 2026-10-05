@@ -16,6 +16,7 @@ data class ThroughputMeasurement(
     val budgetBytes: Long,
     val isPartial: Boolean,
     val issues: List<MeasurementIssue> = emptyList(),
+    val successfulStreams: Int = 0,
 )
 
 enum class TransferDirection {

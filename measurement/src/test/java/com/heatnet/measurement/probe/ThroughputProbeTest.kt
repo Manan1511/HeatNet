@@ -37,6 +37,8 @@ class ThroughputProbeTest {
 
             assertEquals(100L, download.payloadBytes)
             assertEquals(100L, upload.payloadBytes)
+            assertEquals(2, download.successfulStreams)
+            assertEquals(2, upload.successfulStreams)
             assertFalse(download.isPartial)
             assertFalse(upload.isPartial)
             assertTrue(download.payloadBytes <= config.maxBytesPerDirection)
@@ -70,6 +72,7 @@ class ThroughputProbeTest {
             )
 
             assertEquals(28L, result.payloadBytes)
+            assertEquals(2, result.successfulStreams)
             assertTrue(result.isPartial)
             assertTrue(result.megabitsPerSecond != null)
         } finally {
@@ -114,6 +117,7 @@ class ThroughputProbeTest {
             )
 
             assertEquals(0L, result.payloadBytes)
+            assertEquals(0, result.successfulStreams)
             assertTrue(result.isPartial)
             assertTrue(result.issues.any { it.code.name == "ENDPOINT_FAILURE" })
         } finally {
