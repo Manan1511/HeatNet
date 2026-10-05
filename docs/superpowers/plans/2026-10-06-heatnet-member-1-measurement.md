@@ -89,10 +89,10 @@ Use `Float?` for throughput, latency, jitter, and loss fields to match the share
 
 **Interfaces:** `ConnectionSnapshot(network: Network?, connectionType: ConnectionType?, hasValidatedInternet: Boolean)`; `ConnectionMonitor.state: StateFlow<ConnectionSnapshot>`, `start()`, and `stop()`. `TransportClassifier.classify(transports: Set<NetworkTransport>): ConnectionType?`, where `NetworkTransport` has `WIFI`, `CELLULAR`, `VPN`, `ETHERNET`, and `OTHER`; the Android adapter maps `NetworkCapabilities` to this pure set.
 
-- [ ] **Step 1: Write failing tests** including `TransportClassifierTest.rejectsUnsupportedOrAmbiguousTransports` for Wi-Fi/mobile classification and unsupported VPN/Ethernet/no transport/both Wi-Fi and cellular, plus validated versus unvalidated state, lost default network, and idempotent callback registration/unregistration.
-- [ ] **Step 2: Run** `.\gradlew.bat :measurement:testDebugUnitTest` and confirm classifier/monitor tests fail.
-- [ ] **Step 3: Implement** a pure classifier and `ConnectivityManager.registerDefaultNetworkCallback` adapter. Construct the callback with `FLAG_INCLUDE_LOCATION_INFO`, publish the default network and `NET_CAPABILITY_VALIDATED` via `StateFlow`, and ignore stale callbacks from replaced networks.
-- [ ] **Step 4: Run** `.\gradlew.bat :measurement:testDebugUnitTest :measurement:connectedDebugAndroidTest`; confirm classification and callback lifecycle tests pass on the API 36 AVD.
+- [x] **Step 1: Write failing tests** including `TransportClassifierTest.rejectsUnsupportedOrAmbiguousTransports` for Wi-Fi/mobile classification and unsupported VPN/Ethernet/no transport/both Wi-Fi and cellular, plus validated versus unvalidated state, lost default network, and idempotent callback registration/unregistration.
+- [x] **Step 2: Run** `.\gradlew.bat :measurement:testDebugUnitTest` and confirm classifier/monitor tests fail.
+- [x] **Step 3: Implement** a pure classifier and `ConnectivityManager.registerDefaultNetworkCallback` adapter. Construct the callback with `FLAG_INCLUDE_LOCATION_INFO`, publish the default network and `NET_CAPABILITY_VALIDATED` via `StateFlow`, and ignore stale callbacks from replaced networks.
+- [x] **Step 4: Run** `.\gradlew.bat :measurement:testDebugUnitTest :measurement:connectedDebugAndroidTest`; confirm classification and callback lifecycle tests pass on the API 36 AVD.
 - [ ] **Step 5: Commit** as `feat(measurement): monitor active network state`.
 
 ### Task 4: Read Wi-Fi and cellular radio data with the approved permissions
