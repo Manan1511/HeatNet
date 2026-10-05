@@ -125,10 +125,10 @@ Use `Float?` for throughput, latency, jitter, and loss fields to match the share
 
 **Interfaces:** `PingProcess.run(host, count, intervalMillis, timeoutMillis): PingExecution`; `PacketLossProbe.measure(network, config, httpReachable, deadlineNanos): PacketLossMeasurement`. The result always identifies `ICMP`, `HTTP_PROBE_FAILURES`, or `UNAVAILABLE`.
 
-- [ ] **Step 1: Write failing tests** including `PacketLossProbeTest.fallbackRequiresReachableHttp` and `PacketLossProbeTest.offlineLossIsUnavailable`; cover standard Android ping summaries, malformed/empty output, executable failure, zero ICMP replies, twenty HTTP attempts with started-attempt denominator, unstarted attempts excluded, and HTTP success/failure outcomes.
-- [ ] **Step 2: Run** `.\gradlew.bat :measurement:testDebugUnitTest` and confirm the parser/probe tests fail.
-- [ ] **Step 3: Implement** `ping` process execution for twenty echoes to the configured Cloudflare host, parse transmitted/received counts, and stop the process on cancellation/deadline. If ICMP cannot run or receives no replies and an earlier HTTP probe succeeded, make up to twenty small HTTP probes; otherwise return unavailable loss rather than calling total offline failure packet loss.
-- [ ] **Step 4: Run** `.\gradlew.bat :measurement:testDebugUnitTest` and confirm ICMP, fallback, offline, and cleanup tests pass.
+- [x] **Step 1: Write failing tests** including `PacketLossProbeTest.fallbackRequiresReachableHttp` and `PacketLossProbeTest.offlineLossIsUnavailable`; cover standard Android ping summaries, malformed/empty output, executable failure, zero ICMP replies, twenty HTTP attempts with started-attempt denominator, unstarted attempts excluded, and HTTP success/failure outcomes.
+- [x] **Step 2: Run** `.\gradlew.bat :measurement:testDebugUnitTest` and confirm the parser/probe tests fail.
+- [x] **Step 3: Implement** `ping` process execution for twenty echoes to the configured Cloudflare host, parse transmitted/received counts, and stop the process on cancellation/deadline. If ICMP cannot run or receives no replies and an earlier HTTP probe succeeded, make up to twenty small HTTP probes; otherwise return unavailable loss rather than calling total offline failure packet loss.
+- [x] **Step 4: Run** `.\gradlew.bat :measurement:testDebugUnitTest :measurement:connectedDebugAndroidTest` and confirm ICMP, fallback, offline, and cleanup tests pass.
 - [ ] **Step 5: Commit** as `feat(measurement): report ICMP and HTTP probe loss`.
 
 ### Task 7: Orchestrate one reading and preserve partial results
