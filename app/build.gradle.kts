@@ -31,6 +31,7 @@ kotlin {
 
 dependencies {
     implementation(project(":measurement"))
+    implementation(project(":data"))
 
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.runner)
