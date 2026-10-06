@@ -12,6 +12,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.heatnet.measurement.model.ConnectionType
+import com.heatnet.ui.screens.CompareScreen
 import com.heatnet.ui.screens.HomeScreen
 import com.heatnet.ui.screens.MappingScreen
 import com.heatnet.ui.screens.NewSessionScreen
@@ -20,8 +21,7 @@ import com.heatnet.ui.screens.SessionListScreen
 import com.heatnet.ui.screens.SummaryScreen
 
 /**
- * Route names. Member 3's compare screen can be added to [HeatNetApp]'s NavHost, for example as
- * "compare/{before}/{after}", reached from the session list.
+ * Route names. The compare screen is reached from the session list as "compare/{before}/{after}".
  */
 object Routes {
     const val HOME = "home"
@@ -30,10 +30,12 @@ object Routes {
     const val MAP = "map/{sessionId}"
     const val SUMMARY = "summary/{sessionId}"
     const val SESSIONS = "sessions"
+    const val COMPARE = "compare/{before}/{after}"
 
     fun outline(type: ConnectionType) = "outline/${type.name}"
     fun map(sessionId: Long) = "map/$sessionId"
     fun summary(sessionId: Long) = "summary/$sessionId"
+    fun compare(beforeId: Long, afterId: Long) = "compare/$beforeId/$afterId"
 }
 
 @Composable
@@ -91,7 +93,16 @@ fun HeatNetApp(container: AppContainer) {
                     container = container,
                     onBack = { nav.popBackStack() },
                     onOpen = { id -> nav.navigate(Routes.map(id)) },
+                    onCompare = { before, after -> nav.navigate(Routes.compare(before, after)) },
                 )
+            }
+            composable(
+                Routes.COMPARE,
+                listOf(navArgument("before") { type = NavType.LongType }, navArgument("after") { type = NavType.LongType }),
+            ) { entry ->
+                val before = entry.arguments?.getLong("before") ?: return@composable
+                val after = entry.arguments?.getLong("after") ?: return@composable
+                CompareScreen(container = container, beforeId = before, afterId = after, onBack = { nav.popBackStack() })
             }
         }
     }
