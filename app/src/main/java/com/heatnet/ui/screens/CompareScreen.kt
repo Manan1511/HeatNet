@@ -39,6 +39,7 @@ import com.heatnet.data.analysis.SessionComparison
 import com.heatnet.data.model.Metric
 import com.heatnet.data.model.SessionWithReadings
 import com.heatnet.ui.AppContainer
+import com.heatnet.ui.theme.HeatNetTopBar
 import com.heatnet.ui.heatmap.HeatmapLegend
 import com.heatnet.ui.heatmap.HeatmapView
 import com.heatnet.ui.heatmap.MetricScale
@@ -68,8 +69,9 @@ fun CompareScreen(container: AppContainer, beforeId: Long, afterId: Long, onBack
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
+            HeatNetTopBar(
                 title = { Text("Compare sessions") },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }

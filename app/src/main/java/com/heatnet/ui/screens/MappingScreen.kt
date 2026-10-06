@@ -43,6 +43,8 @@ import com.heatnet.data.model.Reading
 import com.heatnet.measurement.model.ConnectionType
 import com.heatnet.measurement.model.MeasurementStatus
 import com.heatnet.ui.AppContainer
+import com.heatnet.ui.theme.HeatNetTopBar
+import com.heatnet.ui.theme.PrimaryButton
 import com.heatnet.ui.heatmap.HeatmapConfig
 import com.heatnet.ui.heatmap.HeatmapLegend
 import com.heatnet.ui.heatmap.HeatmapView
@@ -62,8 +64,9 @@ fun MappingScreen(container: AppContainer, sessionId: Long, onBack: () -> Unit, 
     val readings by vm.readings.collectAsStateWithLifecycle()
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
+            HeatNetTopBar(
                 title = {
                     Column {
                         Text(session?.name ?: "Map", style = MaterialTheme.typography.titleMedium)
@@ -155,9 +158,7 @@ fun MappingScreen(container: AppContainer, sessionId: Long, onBack: () -> Unit, 
                         },
                         style = MaterialTheme.typography.bodyMedium,
                     )
-                    Button(onClick = vm::measure, enabled = vm.position != null, modifier = Modifier.fillMaxWidth()) {
-                        Text("Measure")
-                    }
+                    PrimaryButton("Measure", vm::measure, enabled = vm.position != null)
                 }
                 HeatmapLegend(scale, metric.displayLabel(readings))
             }

@@ -40,6 +40,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.heatnet.data.model.SessionSummary
 import com.heatnet.ui.AppContainer
+import com.heatnet.ui.theme.HeatNetTopBar
+import com.heatnet.ui.theme.PrimaryButton
 import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
@@ -66,8 +68,9 @@ fun SessionListScreen(
     var deleting by remember { mutableStateOf<SessionSummary?>(null) }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
+            HeatNetTopBar(
                 title = { Text(if (comparing) "Pick two sessions" else "Saved sessions") },
                 navigationIcon = {
                     if (comparing) {
@@ -89,11 +92,11 @@ fun SessionListScreen(
             if (comparing) {
                 val ids = CompareSelection.orderedIds(selected)
                 Column(Modifier.fillMaxWidth().padding(16.dp)) {
-                    Button(
+                    PrimaryButton(
+                        text = if (ids == null) "Select ${CompareSelection.REQUIRED - selected.size} more" else "Compare",
                         onClick = { ids?.let { (before, after) -> onCompare(before, after) } },
                         enabled = ids != null,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text(if (ids == null) "Select ${CompareSelection.REQUIRED - selected.size} more" else "Compare") }
+                    )
                     Text(
                         "Only sessions on the same connection type (Wi-Fi or mobile data) can be compared.",
                         style = MaterialTheme.typography.bodySmall,
@@ -115,6 +118,7 @@ fun SessionListScreen(
                 val isSelected = selected.any { it.id == s.id }
                 val enabled = !comparing || CompareSelection.canSelect(selected, s)
                 ListItem(
+                    colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
                     headlineContent = { Text(s.name) },
                     supportingContent = {
                         Text("${s.connectionType.label} · ${s.readingCount} readings · ${dateFormat.format(Date(s.createdAt))}")

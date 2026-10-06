@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.heatnet.measurement.model.ConnectionType
 import com.heatnet.ui.AppContainer
+import com.heatnet.ui.theme.HeatNetTopBar
 import com.heatnet.ui.geometry.Geometry
 import com.heatnet.ui.heatmap.formatValue
 
@@ -54,8 +55,9 @@ fun OutlineScreen(
     val closeRadius = with(LocalDensity.current) { 28.dp.toPx() }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
+            HeatNetTopBar(
                 title = { Text(if (vm.closed) "Set the scale" else "Draw the room") },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }

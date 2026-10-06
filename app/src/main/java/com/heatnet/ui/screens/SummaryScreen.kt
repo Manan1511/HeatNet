@@ -27,6 +27,10 @@ import androidx.compose.ui.unit.dp
 import com.heatnet.data.analysis.WeakSpotDetector
 import com.heatnet.data.analysis.WeakSpotReport
 import com.heatnet.ui.AppContainer
+import com.heatnet.ui.theme.HeatNetTopBar
+import com.heatnet.ui.theme.PrimaryButton
+import com.heatnet.ui.theme.SecondaryButton
+import com.heatnet.ui.theme.SurfaceCard
 
 /** Shown after Finish (PRD 5 step 7). Readings are already saved; the text comes from Member 3's F8 detector. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,7 +42,7 @@ fun SummaryScreen(container: AppContainer, sessionId: Long, onBackToMap: () -> U
         }
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Session saved") }) }) { padding ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background, topBar = { HeatNetTopBar(title = { Text("Session saved") }) }) { padding ->
         val loaded = state
         if (loaded == null) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -50,8 +54,8 @@ fun SummaryScreen(container: AppContainer, sessionId: Long, onBackToMap: () -> U
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text("$count readings saved on this phone.", style = MaterialTheme.typography.bodyLarge)
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SurfaceCard(Modifier.fillMaxWidth()) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Weak spots", style = MaterialTheme.typography.titleMedium)
                     if (report.spots.isEmpty()) {
                         Text(report.summary, style = MaterialTheme.typography.bodyMedium)
@@ -61,8 +65,8 @@ fun SummaryScreen(container: AppContainer, sessionId: Long, onBackToMap: () -> U
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onBackToMap, modifier = Modifier.weight(1f)) { Text("Back to map") }
-                Button(onClick = onDone, modifier = Modifier.weight(1f)) { Text("Done") }
+                SecondaryButton("Back to map", onBackToMap, Modifier.weight(1f))
+                PrimaryButton("Done", onDone, Modifier.weight(1f))
             }
         }
     }

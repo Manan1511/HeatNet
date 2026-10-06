@@ -39,6 +39,9 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.heatnet.measurement.model.ConnectionType
 import com.heatnet.ui.AppContainer
+import com.heatnet.ui.theme.HeatNetTopBar
+import com.heatnet.ui.theme.PrimaryButton
+import com.heatnet.ui.theme.SurfaceCard
 
 /**
  * Step 1 of a session: detect Wi-Fi or mobile data with Member 1's [ConnectionMonitor] and lock
@@ -70,8 +73,9 @@ fun NewSessionScreen(container: AppContainer, onBack: () -> Unit, onContinue: (C
     val detected: ConnectionType? = if (fake) demoType else snapshot.connectionType
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
+            HeatNetTopBar(
                 title = { Text("New session") },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
@@ -91,8 +95,8 @@ fun NewSessionScreen(container: AppContainer, onBack: () -> Unit, onContinue: (C
                     }
                 }
             } else {
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                SurfaceCard(Modifier.fillMaxWidth(), container = MaterialTheme.colorScheme.primaryContainer) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Your connection", style = MaterialTheme.typography.labelLarge)
                         Text(
                             when {
@@ -113,8 +117,8 @@ fun NewSessionScreen(container: AppContainer, onBack: () -> Unit, onContinue: (C
 
             val needsLocation = !fake && detected == ConnectionType.WIFI && !hasLocation
             if (needsLocation) {
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SurfaceCard(Modifier.fillMaxWidth(), container = MaterialTheme.colorScheme.tertiaryContainer) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Location permission needed", style = MaterialTheme.typography.titleMedium)
                         Text(
                             "Android only shares Wi-Fi details (signal strength, channel, access point) with apps " +
@@ -135,13 +139,11 @@ fun NewSessionScreen(container: AppContainer, onBack: () -> Unit, onContinue: (C
                 }
             }
 
-            Button(
+            PrimaryButton(
+                text = if (detected != null) "Continue on ${detected.label}" else "Continue",
                 onClick = { detected?.let(onContinue) },
                 enabled = detected != null && !needsLocation,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(if (detected != null) "Continue on ${detected.label}" else "Continue")
-            }
+            )
         }
     }
 }

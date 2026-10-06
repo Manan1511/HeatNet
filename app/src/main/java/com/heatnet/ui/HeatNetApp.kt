@@ -1,11 +1,6 @@
 package com.heatnet.ui
 
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -19,6 +14,7 @@ import com.heatnet.ui.screens.NewSessionScreen
 import com.heatnet.ui.screens.OutlineScreen
 import com.heatnet.ui.screens.SessionListScreen
 import com.heatnet.ui.screens.SummaryScreen
+import com.heatnet.ui.theme.HeatNetTheme
 
 /**
  * Route names. The compare screen is reached from the session list as "compare/{before}/{after}".
@@ -40,9 +36,7 @@ object Routes {
 
 @Composable
 fun HeatNetApp(container: AppContainer) {
-    val context = LocalContext.current
-    val colors = if (isSystemInDarkTheme()) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-    MaterialTheme(colorScheme = colors) {
+    HeatNetTheme {
         val nav = rememberNavController()
         NavHost(nav, startDestination = Routes.HOME) {
             composable(Routes.HOME) {
