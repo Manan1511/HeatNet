@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "HeatNet"
-include(":app", ":measurement")
+include(":app", ":measurement", ":data")
