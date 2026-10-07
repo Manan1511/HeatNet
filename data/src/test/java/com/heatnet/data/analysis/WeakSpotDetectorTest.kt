@@ -3,6 +3,7 @@ package com.heatnet.data.analysis
 import com.heatnet.data.reading
 import com.heatnet.data.room
 import com.heatnet.measurement.model.ConnectionType
+import com.heatnet.measurement.model.PacketLossMethod
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -112,5 +113,32 @@ class WeakSpotDetectorTest {
         )
         val spot = WeakSpotDetector.analyse(mobile, readings).spots.single()
         assertEquals(Quadrant.SOUTH_EAST, spot.quadrant)
+    }
+
+    @Test
+    fun `HTTP probe failures are not described as packet loss`() {
+        val readings = listOf(
+            reading(1f, 1f, loss = 5f).copy(packetLossMethod = PacketLossMethod.HTTP_PROBE_FAILURES),
+            reading(1.2f, 1f, loss = 5f).copy(packetLossMethod = PacketLossMethod.HTTP_PROBE_FAILURES),
+            reading(1.4f, 1f, loss = 0f),
+            reading(1.6f, 1f, loss = 0f),
+        )
+
+        assertTrue(WeakSpotDetector.analyse(defaultRoom, readings).spots.isEmpty())
+    }
+
+    @Test
+    fun `enough readings with no usable metrics says measurements are unavailable`() {
+        val readings = listOf(
+            reading(1f, 1f, download = null, upload = null, latency = null, loss = null, signal = null),
+            reading(8f, 2f, download = null, upload = null, latency = null, loss = null, signal = null),
+            reading(2f, 6f, download = null, upload = null, latency = null, loss = null, signal = null),
+        )
+
+        val report = WeakSpotDetector.analyse(defaultRoom, readings)
+
+        assertTrue(report.enoughReadings)
+        assertTrue(report.spots.isEmpty())
+        assertEquals("No usable measurements are available to identify weak spots.", report.summary)
     }
 }

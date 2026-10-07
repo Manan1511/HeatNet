@@ -17,9 +17,10 @@ fun describe(comparison: MetricComparison): String {
     val before = comparison.before
     val after = comparison.after
     if (comparison.verdict == Verdict.NOT_ENOUGH_DATA || before == null || after == null) {
-        return "${comparison.metric.label}: not enough readings in both sessions to compare."
+        return "${comparison.metric.label}: not enough shared room areas with usable data to compare."
     }
     val unit = comparison.metric.unit
     return "${comparison.metric.label}: ${comparison.verdict.label.lowercase()}. " +
-        "Average went from ${formatValue(before.mean)} $unit to ${formatValue(after.mean)} $unit."
+        "Average across ${before.count} shared room area${if (before.count == 1) "" else "s"} went from " +
+        "${formatValue(before.mean)} $unit to ${formatValue(after.mean)} $unit."
 }

@@ -38,7 +38,25 @@ class OutlineViewModel(
     var creating by mutableStateOf(false)
         private set
 
-    fun onTap(p: Point, closeRadiusPx: Float) {
+    // Canvas size when the first corner was placed. If it later shrinks, the drawing scales down
+    // to fit instead of overflowing; stored corners stay in the original canvas coordinate space.
+    private var drawnWidth = 0f
+    private var drawnHeight = 0f
+
+    fun displayScale(canvasWidth: Float, canvasHeight: Float): Float =
+        OutlineCanvasTransform.scale(drawnWidth, drawnHeight, canvasWidth, canvasHeight)
+
+    /** A tap in current canvas pixels, mapped back to the stored corner coordinate space. */
+    fun onCanvasTap(p: Point, canvasWidth: Float, canvasHeight: Float, closeRadiusPx: Float) {
+        if (corners.isEmpty() && !closed) {
+            drawnWidth = canvasWidth
+            drawnHeight = canvasHeight
+        }
+        val scale = displayScale(canvasWidth, canvasHeight)
+        onTap(OutlineCanvasTransform.toStored(p, scale), closeRadiusPx / scale)
+    }
+
+    private fun onTap(p: Point, closeRadiusPx: Float) {
         if (closed) {
             Geometry.nearestEdge(corners, p, closeRadiusPx * 1.5f)?.let { selectedWall = it }
             return
@@ -92,15 +110,14 @@ class OutlineViewModel(
         message = null
         closed = false
         corners.clear()
+        drawnWidth = 0f
+        drawnHeight = 0f
     }
 
     /** The outline in metres, or an error to show under the length field. */
     fun scaledOutline(): Result<List<Point>> {
-        val length = wallLengthText.trim().replace(',', '.').toFloatOrNull()
-            ?: return Result.failure(IllegalArgumentException("Enter the wall's length in metres."))
-        if (length < MIN_WALL_METRES || length > MAX_WALL_METRES) {
-            return Result.failure(IllegalArgumentException("Enter a length between $MIN_WALL_METRES and $MAX_WALL_METRES m."))
-        }
+        val length = OutlineInputValidation.parseWallLength(wallLengthText, MIN_WALL_METRES, MAX_WALL_METRES)
+            .getOrElse { return Result.failure(it) }
         val metres = Geometry.outlineToMetres(corners, selectedWall, length)
         val b = Geometry.bounds(metres)
         if (b.width > MAX_ROOM_METRES || b.height > MAX_ROOM_METRES) {

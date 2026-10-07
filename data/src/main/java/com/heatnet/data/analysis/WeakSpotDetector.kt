@@ -4,6 +4,7 @@ import com.heatnet.data.model.Point
 import com.heatnet.data.model.Reading
 import com.heatnet.data.model.Session
 import com.heatnet.measurement.model.ConnectionType
+import com.heatnet.measurement.model.PacketLossMethod
 
 /** Starting thresholds from PRD section 10. Tune after real-room testing. */
 data class WeakSpotThresholds(
@@ -66,7 +67,21 @@ object WeakSpotDetector {
         }
 
         val centre = centreOf(session, readings)
-        val bestDownload = readings.mapNotNull { it.downloadMbps }.maxOrNull()
+        val usableReadings = readings.any { reading ->
+            reading.signalDbm != null ||
+                reading.latencyMs?.isFinite() == true ||
+                (reading.packetLossMethod == PacketLossMethod.ICMP && reading.packetLossPct?.isFinite() == true) ||
+                reading.downloadMbps?.isFinite() == true
+        }
+        if (!usableReadings) {
+            return WeakSpotReport(
+                enoughReadings = true,
+                spots = emptyList(),
+                summary = "No usable measurements are available to identify weak spots.",
+            )
+        }
+
+        val bestDownload = readings.mapNotNull { it.downloadMbps?.takeIf(Float::isFinite) }.maxOrNull()
         val signalLimit = when (session.connectionType) {
             ConnectionType.WIFI -> thresholds.wifiSignalDbm
             ConnectionType.MOBILE -> thresholds.mobileSignalDbm
@@ -83,7 +98,12 @@ object WeakSpotDetector {
                 if (flagged(inQuadrant, { it.latencyMs }, thresholds.quadrantShare) { it > thresholds.latencyMs }) {
                     add(Problem.HIGH_LATENCY)
                 }
-                if (flagged(inQuadrant, { it.packetLossPct }, thresholds.quadrantShare) { it > thresholds.packetLossPct }) {
+                if (flagged(
+                        inQuadrant,
+                        { reading -> reading.packetLossPct?.takeIf { reading.packetLossMethod == PacketLossMethod.ICMP } },
+                        thresholds.quadrantShare,
+                    ) { it > thresholds.packetLossPct }
+                ) {
                     add(Problem.PACKET_LOSS)
                 }
                 if (bestDownload != null && bestDownload > 0f) {
@@ -136,7 +156,7 @@ object WeakSpotDetector {
         share: Float,
         isWeak: (Float) -> Boolean,
     ): Boolean {
-        val values = readings.mapNotNull(value)
+        val values = readings.mapNotNull(value).filter(Float::isFinite)
         if (values.isEmpty()) return false
         return values.count(isWeak).toFloat() / values.size >= share
     }

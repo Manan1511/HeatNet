@@ -68,9 +68,14 @@ fun MappingScreen(container: AppContainer, sessionId: Long, onBack: () -> Unit, 
                     Column {
                         Text(session?.name ?: "Map", style = MaterialTheme.typography.titleMedium)
                         session?.let {
+                            val demoLabel = when {
+                                readings.isEmpty() -> ""
+                                readings.all { reading -> reading.isDemo } -> " · demo"
+                                readings.any { reading -> reading.isDemo } -> " · includes demo"
+                                else -> ""
+                            }
                             Text(
-                                "${it.connectionType.label} · ${readings.size} readings" +
-                                    if (container.useFakeMeasurements) " · demo" else "",
+                                "${it.connectionType.label} · ${readings.size} readings$demoLabel",
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }

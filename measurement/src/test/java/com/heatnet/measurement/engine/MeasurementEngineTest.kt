@@ -37,6 +37,23 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class MeasurementEngineTest {
     @Test
+    fun wifiRadioIsReadForTheCapturedNetworkDuringTheMeasurement() = runBlocking {
+        val network = fakeNetwork()
+        val sampledRadio = RadioSnapshot(signalDbm = -61, linkSpeedMbps = 400, wifiBand = "5", wifiChannel = 36)
+        val harness = Harness(
+            ConnectionSnapshot(network, ConnectionType.WIFI, hasValidatedInternet = true),
+            wifiRead = { sampledRadio },
+        )
+
+        val result = MeasurementEngine(harness.dependencies()).takeMeasurement(ConnectionType.WIFI)
+
+        assertEquals(-61, result.signalDbm)
+        assertEquals(400, result.linkSpeedMbps)
+        assertEquals(1, harness.wifiNetworks.size)
+        assertSame(network, harness.wifiNetworks.single())
+    }
+
+    @Test
     fun successfulReadingEmitsTheApprovedProgressOrderAndCapturesAllFields() = runBlocking {
         val network = fakeNetwork()
         val harness = Harness(snapshot(network, ConnectionType.WIFI, validated = true))
@@ -270,22 +287,7 @@ class MeasurementEngineTest {
     }
 
     private fun snapshot(network: Network?, type: ConnectionType?, validated: Boolean) =
-        ConnectionSnapshot(
-            network,
-            type,
-            validated,
-            wifiRadioSnapshot = if (type == ConnectionType.WIFI) {
-                RadioSnapshot(
-                    signalDbm = -54,
-                    linkSpeedMbps = 866,
-                    wifiBand = "6",
-                    wifiChannel = 1,
-                    bssid = "00:11:22:33:44:55",
-                )
-            } else {
-                null
-            },
-        )
+        ConnectionSnapshot(network, type, validated)
 
     private fun fakeNetwork(): Network {
         val unsafeClass = Class.forName("sun.misc.Unsafe")
@@ -298,6 +300,9 @@ class MeasurementEngineTest {
     private class Harness(
         initialSnapshot: ConnectionSnapshot,
         private val permission: (ConnectionType) -> PermissionOutcome = { PermissionOutcome.GRANTED },
+        private val wifiRead: (Network) -> RadioSnapshot = {
+            RadioSnapshot(signalDbm = -54, linkSpeedMbps = 866, wifiBand = "6", wifiChannel = 1, bssid = "00:11:22:33:44:55")
+        },
         private val radioMobile: RadioSnapshot = RadioSnapshot(signalDbm = -91, networkType = "NR"),
         private val latency: () -> LatencyMeasurement = {
             LatencyMeasurement(12f, 2f, attemptedRequests = 10, successfulRequests = 10)
@@ -318,6 +323,7 @@ class MeasurementEngineTest {
         val uploadCalls = AtomicInteger()
         val latencyCalls = AtomicInteger()
         val lossCalls = AtomicInteger()
+        val wifiNetworks = mutableListOf<Network>()
         val capturedNetworks = mutableListOf<Network>()
         var httpReachablePassedToLoss = false
         var nowNanos = 100L
@@ -329,6 +335,10 @@ class MeasurementEngineTest {
         fun dependencies(): MeasurementDependencies = MeasurementDependencies(
             connectionState = state,
             permissionCheck = permission,
+            readWifiRadio = { network ->
+                wifiNetworks += network
+                wifiRead(network)
+            },
             readCellularRadio = { radioMobile },
             measureThroughput = { network, direction, budget, deadline ->
                 capturedNetworks += network

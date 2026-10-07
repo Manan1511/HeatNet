@@ -130,20 +130,11 @@ class MeasurementEngine(
                                 issues += it.issues
                             },
                         ) {
-                            withContext(Dispatchers.IO) {
-                                runInterruptible {
-                                    if (expectedType == ConnectionType.WIFI) {
-                                        captured.wifiRadioSnapshot ?: RadioSnapshot(
-                                            issues = listOf(
-                                                MeasurementIssue(
-                                                    IssueCode.RADIO_UNAVAILABLE,
-                                                    "Wi-Fi radio data was unavailable in the captured network callback",
-                                                ),
-                                            ),
-                                        )
-                                    } else {
-                                        dependencies.readCellularRadio()
-                                    }
+                            if (expectedType == ConnectionType.WIFI) {
+                                dependencies.readWifiRadio(network)
+                            } else {
+                                withContext(Dispatchers.IO) {
+                                    runInterruptible { dependencies.readCellularRadio() }
                                 }
                             }
                         }

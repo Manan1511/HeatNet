@@ -56,6 +56,7 @@ internal fun ReadingEntity.toDomain() = Reading(
     wifiChannel = wifiChannel,
     bssid = bssid,
     networkType = networkType,
+    isDemo = isDemo,
 )
 
 internal fun Reading.toEntity() = ReadingEntity(
@@ -77,6 +78,7 @@ internal fun Reading.toEntity() = ReadingEntity(
     wifiChannel = wifiChannel,
     bssid = bssid,
     networkType = networkType,
+    isDemo = isDemo,
 )
 
 /** Combines Member 1's transient result with the session and tapped position (Member 2 supplies x, y). */
@@ -99,4 +101,5 @@ fun MeasurementResult.toReading(sessionId: Long, x: Float, y: Float) = Reading(
     wifiChannel = wifiChannel,
     bssid = bssid,
     networkType = networkType,
+    isDemo = isDemo,
 )

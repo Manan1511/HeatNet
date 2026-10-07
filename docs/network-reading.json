@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "HeatNet Network Reading Path",
+    "subtitle": "Fresh Wi-Fi radio sampling and distinct HTTPS/TCP and ICMP measurements on Android",
+    "output": "docs/network-reading.html",
+    "viewBox": [1080, 580],
+    "animation": "trace",
+    "visual_preset": "signal-flow",
+    "quality_profile": "showcase",
+    "column_fit": "spread"
+  },
+  "participants": [
+    { "id": "ui", "type": "frontend", "label": "Map UI", "sublabel": "tap + result" },
+    { "id": "engine", "type": "backend", "label": "Engine", "sublabel": "captured Network" },
+    { "id": "monitor", "type": "backend", "label": "Network Monitor", "sublabel": "default transport" },
+    { "id": "wifi", "type": "backend", "label": "Wi-Fi Reader", "sublabel": "fresh callback" },
+    { "id": "http", "type": "backend", "label": "HTTP Probes", "sublabel": "OkHttp on Network" },
+    { "id": "server", "type": "cloud", "label": "Cloudflare", "sublabel": "public test target" },
+    { "id": "icmp", "type": "backend", "label": "ICMP Probe", "sublabel": "ping on route" },
+    { "id": "db", "type": "database", "label": "Room DB", "sublabel": "saved readings" }
+  ],
+  "messages": [
+    { "id": "measure", "from": "ui", "to": "engine", "y": 160, "label": "Measure at the selected room point (x, y)", "variant": "emphasis", "note": "The network monitor captures the active default Network and Wi-Fi/mobile transport; every probe reuses that handle." },
+    { "id": "capture", "from": "monitor", "to": "engine", "y": 188, "label": "Active default Network + transport snapshot", "variant": "return" },
+    { "id": "radio-call", "from": "engine", "to": "wifi", "y": 216, "label": "Check fine location; register fresh Wi-Fi callback", "note": "FLAG_INCLUDE_LOCATION_INFO and the captured Network handle gate this read; without fine location it is blocked." },
+    { "id": "radio-fields", "from": "wifi", "to": "engine", "y": 244, "label": "Fresh RSSI, Rx link speed, frequency + BSSID", "variant": "return", "note": "Frequency maps to band/channel. Redacted fields stay null, so the reading is partial." },
+    { "id": "http-run", "from": "engine", "to": "http", "y": 272, "label": "Run download, upload, then latency probes", "variant": "emphasis" },
+    { "id": "http-out", "from": "http", "to": "server", "y": 300, "label": "HTTPS over TCP/IP via Wi-Fi AP or cellular RAN + ISP", "note": "Socket and DNS use the captured Network. HTTP responses return status, bytes and timing; goodput is Internet throughput, not raw link capacity." },
+    { "id": "http-values", "from": "http", "to": "engine", "y": 328, "label": "Goodput, HTTP RTT + jitter", "variant": "return" },
+    { "id": "icmp-run", "from": "engine", "to": "icmp", "y": 356, "label": "Run configured ICMP Echo probes" },
+    { "id": "icmp-out", "from": "icmp", "to": "server", "y": 384, "label": "ICMP Echo via captured interface and IP", "note": "ping -I selects the captured Network route; echo replies or timeouts produce the result." },
+    { "id": "icmp-result", "from": "icmp", "to": "engine", "y": 412, "label": "ICMP loss from echo results; unavailable if probe cannot run", "variant": "return" },
+    { "id": "fallback", "from": "engine", "to": "http", "y": 440, "label": "If ICMP has no replies and HTTP worked: fallback probes", "variant": "dashed" },
+    { "id": "fallback-result", "from": "http", "to": "engine", "y": 468, "label": "Failed-request rate, method = HTTP", "variant": "return", "note": "Application-probe failures, not raw packet drops; without HTTP reachability the result is unavailable." },
+    { "id": "persist", "from": "engine", "to": "db", "y": 496, "label": "Save metrics, loss method, coordinates + demo flag; refresh map", "variant": "emphasis", "note": "Room stores source provenance. Heatmap interpolation estimates unsampled room points." }
+  ],
+  "activations": [
+    { "participant": "ui", "from": 156, "to": 508, "type": "frontend" },
+    { "participant": "engine", "from": 160, "to": 502, "type": "backend" },
+    { "participant": "monitor", "from": 180, "to": 194, "type": "backend" },
+    { "participant": "wifi", "from": 204, "to": 238, "type": "backend" },
+    { "participant": "http", "from": 252, "to": 480, "type": "backend" },
+    { "participant": "server", "from": 276, "to": 406, "type": "cloud" },
+    { "participant": "icmp", "from": 348, "to": 432, "type": "backend" },
+    { "participant": "db", "from": 492, "to": 508, "type": "database" }
+  ]
+}

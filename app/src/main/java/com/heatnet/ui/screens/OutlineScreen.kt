@@ -27,6 +27,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
@@ -37,6 +38,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.heatnet.data.model.Point
 import com.heatnet.measurement.model.ConnectionType
 import com.heatnet.ui.AppContainer
 import com.heatnet.ui.geometry.Geometry
@@ -136,8 +138,14 @@ private fun OutlineCanvas(vm: OutlineViewModel, closeRadius: Float, modifier: Mo
     Canvas(
         modifier
             .padding(vertical = 4.dp)
-            .pointerInput(vm) { detectTapGestures { vm.onTap(com.heatnet.data.model.Point(it.x, it.y), closeRadius) } },
+            .clipToBounds()
+            .pointerInput(vm) {
+                detectTapGestures {
+                    vm.onCanvasTap(Point(it.x, it.y), size.width.toFloat(), size.height.toFloat(), closeRadius)
+                }
+            },
     ) {
+        val scale = vm.displayScale(size.width, size.height)
         drawRect(colors.surfaceContainerLow)
         val gridStep = 24.dp.toPx()
         var x = 0f
@@ -151,7 +159,9 @@ private fun OutlineCanvas(vm: OutlineViewModel, closeRadius: Float, modifier: Mo
             y += gridStep
         }
 
-        val pts = vm.corners.map { Offset(it.x, it.y) }
+        val pts = vm.corners.map { point ->
+            OutlineCanvasTransform.toCanvas(point, scale).let { Offset(it.x, it.y) }
+        }
         if (pts.isEmpty()) return@Canvas
         if (vm.closed) {
             val path = Path().apply {

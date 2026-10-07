@@ -71,7 +71,7 @@ class CompareSelectionTest {
             scaleMin = 30f,
             scaleMax = 100f,
         )
-        assertEquals("Latency: better. Average went from 80 ms to 40 ms.", describe(comparison))
+        assertEquals("Latency: better. Average across 5 shared room areas went from 80 ms to 40 ms.", describe(comparison))
     }
 
     @Test
@@ -85,6 +85,6 @@ class CompareSelectionTest {
             scaleMin = 5f,
             scaleMax = 15f,
         )
-        assertEquals("Download speed: not enough readings in both sessions to compare.", describe(comparison))
+        assertEquals("Download speed: not enough shared room areas with usable data to compare.", describe(comparison))
     }
 }
