@@ -214,7 +214,7 @@ private fun ReadingDetailSheet(reading: Reading, isWifi: Boolean, onDismiss: () 
                 when (reading.status) {
                     MeasurementStatus.COMPLETE -> "All tests finished"
                     MeasurementStatus.PARTIAL -> "Some tests failed; missing values are shown as —"
-                    MeasurementStatus.BLOCKED -> "Test failed (no connection)"
+                    MeasurementStatus.BLOCKED -> "Test failed (no connection or it timed out)"
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
