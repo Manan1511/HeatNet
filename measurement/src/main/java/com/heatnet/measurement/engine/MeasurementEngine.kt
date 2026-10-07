@@ -108,106 +108,124 @@ class MeasurementEngine(
             }
             try {
                 var radio = RadioSnapshot()
-                var haltRemainingStages = false
+                var download: ThroughputMeasurement? = null
+                var upload: ThroughputMeasurement? = null
+                var latency: LatencyMeasurement? = null
+                var packetLoss: PacketLossMeasurement? = null
 
-                suspend fun <T> executeStage(
-                    stage: MeasurementStage,
-                    onFailedIssue: MeasurementIssue = endpointFailureIssue(),
-                    getIssues: (T) -> List<MeasurementIssue>,
-                    action: suspend () -> T,
-                ): T? {
-                    if (haltRemainingStages) return null
-                    onProgress(MeasurementProgress(stage))
-                    return when (val outcome = runStage(routeChanged, captured, deadlineNanos, action)) {
-                        is StageOutcome.Value -> {
-                            issues += getIssues(outcome.value)
-                            outcome.value
-                        }
-                        StageOutcome.RouteChanged -> {
-                            issues += networkChangedIssue()
-                            haltRemainingStages = true
-                            null
-                        }
-                        StageOutcome.TimedOut -> {
-                            issues += timeoutIssue()
-                            haltRemainingStages = true
-                            null
-                        }
-                        is StageOutcome.Failed -> {
-                            issues += onFailedIssue
-                            null
-                        }
-                    }
-                }
-
-                executeStage(
-                    stage = MeasurementStage.CAPTURING_RADIO,
-                    onFailedIssue = MeasurementIssue(
-                        IssueCode.RADIO_UNAVAILABLE,
-                        "Radio data could not be read",
-                    ),
-                    getIssues = RadioSnapshot::issues,
-                ) {
-                    withContext(Dispatchers.IO) {
-                        runInterruptible {
-                            if (expectedType == ConnectionType.WIFI) {
-                                captured.wifiRadioSnapshot ?: RadioSnapshot(
-                                    issues = listOf(
-                                        MeasurementIssue(
-                                            IssueCode.RADIO_UNAVAILABLE,
-                                            "Wi-Fi radio data was unavailable in the captured network callback",
-                                        ),
-                                    ),
-                                )
-                            } else {
-                                dependencies.readCellularRadio()
+                run stages@{
+                    if (!executeStage(
+                            stage = MeasurementStage.CAPTURING_RADIO,
+                            routeChanged = routeChanged,
+                            captured = captured,
+                            deadlineNanos = deadlineNanos,
+                            onProgress = onProgress,
+                            issues = issues,
+                            failureIssue = MeasurementIssue(
+                                IssueCode.RADIO_UNAVAILABLE,
+                                "Radio data could not be read",
+                            ),
+                            onValue = {
+                                radio = it
+                                issues += it.issues
+                            },
+                        ) {
+                            withContext(Dispatchers.IO) {
+                                runInterruptible {
+                                    if (expectedType == ConnectionType.WIFI) {
+                                        captured.wifiRadioSnapshot ?: RadioSnapshot(
+                                            issues = listOf(
+                                                MeasurementIssue(
+                                                    IssueCode.RADIO_UNAVAILABLE,
+                                                    "Wi-Fi radio data was unavailable in the captured network callback",
+                                                ),
+                                            ),
+                                        )
+                                    } else {
+                                        dependencies.readCellularRadio()
+                                    }
+                                }
                             }
                         }
-                    }
-                }?.let { radio = it }
+                    ) return@stages
 
-                val download = executeStage(
-                    stage = MeasurementStage.DOWNLOAD,
-                    getIssues = ThroughputMeasurement::issues,
-                ) {
-                    dependencies.measureThroughput(
-                        network,
-                        TransferDirection.DOWNLOAD,
-                        dependencies.config.maxBytesPerDirection,
-                        deadlineNanos,
-                    )
-                }
+                    if (!executeStage(
+                            stage = MeasurementStage.DOWNLOAD,
+                            routeChanged = routeChanged,
+                            captured = captured,
+                            deadlineNanos = deadlineNanos,
+                            onProgress = onProgress,
+                            issues = issues,
+                            onValue = {
+                                download = it
+                                issues += it.issues
+                            },
+                        ) {
+                            dependencies.measureThroughput(
+                                network,
+                                TransferDirection.DOWNLOAD,
+                                dependencies.config.maxBytesPerDirection,
+                                deadlineNanos,
+                            )
+                        }
+                    ) return@stages
 
-                val upload = executeStage(
-                    stage = MeasurementStage.UPLOAD,
-                    getIssues = ThroughputMeasurement::issues,
-                ) {
-                    dependencies.measureThroughput(
-                        network,
-                        TransferDirection.UPLOAD,
-                        dependencies.config.maxBytesPerDirection,
-                        deadlineNanos,
-                    )
-                }
+                    if (!executeStage(
+                            stage = MeasurementStage.UPLOAD,
+                            routeChanged = routeChanged,
+                            captured = captured,
+                            deadlineNanos = deadlineNanos,
+                            onProgress = onProgress,
+                            issues = issues,
+                            onValue = {
+                                upload = it
+                                issues += it.issues
+                            },
+                        ) {
+                            dependencies.measureThroughput(
+                                network,
+                                TransferDirection.UPLOAD,
+                                dependencies.config.maxBytesPerDirection,
+                                deadlineNanos,
+                            )
+                        }
+                    ) return@stages
 
-                val latency = executeStage(
-                    stage = MeasurementStage.LATENCY,
-                    getIssues = LatencyMeasurement::issues,
-                ) {
-                    dependencies.measureLatency(network, dependencies.config, deadlineNanos)
-                }
+                    if (!executeStage(
+                            stage = MeasurementStage.LATENCY,
+                            routeChanged = routeChanged,
+                            captured = captured,
+                            deadlineNanos = deadlineNanos,
+                            onProgress = onProgress,
+                            issues = issues,
+                            onValue = {
+                                latency = it
+                                issues += it.issues
+                            },
+                        ) {
+                            dependencies.measureLatency(network, dependencies.config, deadlineNanos)
+                        }
+                    ) return@stages
 
-                val packetLoss = executeStage(
-                    stage = MeasurementStage.PACKET_LOSS,
-                    getIssues = PacketLossMeasurement::issues,
-                ) {
-                    val httpReachable = (download?.successfulStreams ?: 0) > 0 ||
-                        (upload?.successfulStreams ?: 0) > 0 ||
-                        (latency?.successfulRequests ?: 0) > 0
-                    dependencies.measurePacketLoss(network, dependencies.config, httpReachable, deadlineNanos)
-                }
+                    if (!executeStage(
+                            stage = MeasurementStage.PACKET_LOSS,
+                            routeChanged = routeChanged,
+                            captured = captured,
+                            deadlineNanos = deadlineNanos,
+                            onProgress = onProgress,
+                            issues = issues,
+                            onValue = {
+                                packetLoss = it
+                                issues += it.issues
+                            },
+                        ) {
+                            val httpReachable = (download?.successfulStreams ?: 0) > 0 ||
+                                (upload?.successfulStreams ?: 0) > 0 ||
+                                (latency?.successfulRequests ?: 0) > 0
+                            dependencies.measurePacketLoss(network, dependencies.config, httpReachable, deadlineNanos)
+                        }
+                    ) return@stages
 
-                if (!haltRemainingStages) {
                     when {
                         routeChanged.isCompleted || !sameRoute(captured, dependencies.connectionState.value) ->
                             issues += networkChangedIssue()
@@ -220,7 +238,7 @@ class MeasurementEngine(
                     expectedType = expectedType,
                     captured = captured,
                     measuredAt = measuredAt,
-                    status = if (issues.isEmpty() && !haltRemainingStages) MeasurementStatus.COMPLETE else MeasurementStatus.PARTIAL,
+                    status = if (issues.isEmpty()) MeasurementStatus.COMPLETE else MeasurementStatus.PARTIAL,
                     radio = radio,
                     download = download,
                     upload = upload,
@@ -312,6 +330,38 @@ class MeasurementEngine(
     private fun timeoutIssue() = MeasurementIssue(IssueCode.TIMEOUT, "The overall measurement deadline expired")
 
     private fun endpointFailureIssue() = MeasurementIssue(IssueCode.ENDPOINT_FAILURE, "A measurement probe failed")
+
+    private suspend inline fun <T> executeStage(
+        stage: MeasurementStage,
+        routeChanged: Deferred<Unit>,
+        captured: ConnectionSnapshot,
+        deadlineNanos: Long,
+        onProgress: (MeasurementProgress) -> Unit,
+        issues: MutableList<MeasurementIssue>,
+        failureIssue: MeasurementIssue = endpointFailureIssue(),
+        onValue: (T) -> Unit,
+        noinline action: suspend () -> T,
+    ): Boolean {
+        onProgress(MeasurementProgress(stage))
+        return when (val outcome = runStage(routeChanged, captured, deadlineNanos, action)) {
+            is StageOutcome.Value -> {
+                onValue(outcome.value)
+                true
+            }
+            StageOutcome.RouteChanged -> {
+                issues += networkChangedIssue()
+                false
+            }
+            StageOutcome.TimedOut -> {
+                issues += timeoutIssue()
+                false
+            }
+            is StageOutcome.Failed -> {
+                issues += failureIssue
+                true
+            }
+        }
+    }
 
     private sealed interface StageOutcome<out T> {
         data class Value<T>(val value: T) : StageOutcome<T>
