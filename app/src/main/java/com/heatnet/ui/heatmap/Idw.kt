@@ -49,10 +49,11 @@ object Idw {
     fun interpolate(samples: List<Sample>, x: Float, y: Float, power: Float): Float {
         var weightedSum = 0.0
         var weightTotal = 0.0
+        val powerDouble = power.toDouble()
         for (s in samples) {
             val d = hypot(s.x - x, s.y - y)
             if (d < EXACT_HIT_METRES) return s.value
-            val w = 1.0 / d.toDouble().pow(power.toDouble())
+            val w = 1.0 / d.toDouble().pow(powerDouble)
             weightedSum += w * s.value
             weightTotal += w
         }
@@ -83,15 +84,37 @@ object Idw {
         val diagonal = hypot(widthMetres, heightMetres)
         val values = FloatArray(cols * rows) { Float.NaN }
         val alphas = FloatArray(cols * rows)
+        val powerDouble = config.power.toDouble()
         for (r in 0 until rows) {
             val y = (r + 0.5f) * cell
             for (c in 0 until cols) {
                 val x = (c + 0.5f) * cell
                 if (!Geometry.contains(outline, Point(x, y))) continue
                 val i = r * cols + c
-                values[i] = interpolate(samples, x, y, config.power)
-                val nearest = samples.minOf { hypot(it.x - x, it.y - y) }
-                alphas[i] = fadeAlpha(nearest, diagonal, config)
+
+                var weightedSum = 0.0
+                var weightTotal = 0.0
+                var minDistance = Float.MAX_VALUE
+                var exactHit = false
+                var exactHitValue = 0f
+
+                for (s in samples) {
+                    val d = hypot(s.x - x, s.y - y)
+                    if (d < minDistance) minDistance = d
+                    if (!exactHit) {
+                        if (d < EXACT_HIT_METRES) {
+                            exactHit = true
+                            exactHitValue = s.value
+                        } else {
+                            val w = 1.0 / d.toDouble().pow(powerDouble)
+                            weightedSum += w * s.value
+                            weightTotal += w
+                        }
+                    }
+                }
+
+                values[i] = if (exactHit) exactHitValue else (weightedSum / weightTotal).toFloat()
+                alphas[i] = fadeAlpha(minDistance, diagonal, config)
             }
         }
         return HeatmapGrid(cols, rows, cell, values, alphas)
