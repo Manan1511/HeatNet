@@ -1,5 +1,6 @@
 package com.heatnet.measurement.radio
 
+import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.telephony.CellSignalStrength
@@ -104,8 +105,9 @@ class CellularRadioReader private constructor(
 }
 
 private class AndroidCellularRadioSource(context: Context) : CellularRadioSource {
-    private val packageManager = context.packageManager
-    private val telephonyManager = context.getSystemService(TelephonyManager::class.java)
+    private val appContext = context.applicationContext
+    private val packageManager = appContext.packageManager
+    private val telephonyManager = appContext.getSystemService(TelephonyManager::class.java)
 
     override fun activeDataSubscriptionId(): Int? {
         if (!packageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY_SUBSCRIPTION)) return null
@@ -116,6 +118,9 @@ private class AndroidCellularRadioSource(context: Context) : CellularRadioSource
 
     override fun readForSubscription(subscriptionId: Int): CellularRadioData? {
         if (!packageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY_RADIO_ACCESS)) return null
+        if (appContext.checkSelfPermission(Manifest.permission.READ_BASIC_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+            return null
+        }
         val subscriptionManager = telephonyManager ?: return null
         return runCatching {
             val manager = subscriptionManager.createForSubscriptionId(subscriptionId)

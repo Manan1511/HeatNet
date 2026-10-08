@@ -116,7 +116,8 @@ class MappingViewModel(
         message = null
         job = viewModelScope.launch {
             try {
-                val result = source().measure(s.connectionType, p.x, p.y) { stage = it.stage }
+                val measurementSource = source()
+                val result = measurementSource.measure(s.connectionType, p.x, p.y) { stage = it.stage }
                 if (MeasureRules.shouldSave(result)) {
                     repository.addReading(s.id, p.x, p.y, result)
                     position = null

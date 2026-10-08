@@ -1,9 +1,18 @@
 package com.heatnet.measurement.radio
 
 import android.net.wifi.WifiInfo
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import com.heatnet.measurement.model.IssueCode
 import com.heatnet.measurement.model.MeasurementIssue
 import com.heatnet.measurement.math.mapWifiFrequency
+import com.heatnet.measurement.network.sameNetworkHandle
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.coroutines.resume
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 internal data class WifiRadioData(
     val rssiDbm: Int,
@@ -12,7 +21,7 @@ internal data class WifiRadioData(
     val bssid: String?,
 )
 
-/** Maps the location-aware [WifiInfo] delivered with a default-network capabilities callback. */
+/** Maps location-aware [WifiInfo] from the network-specific callback used for each reading. */
 class WifiRadioReader {
     fun read(callbackWifiInfo: WifiInfo?): RadioSnapshot = WifiRadioSnapshotMapper.map(
         runCatching {
@@ -26,6 +35,63 @@ class WifiRadioReader {
             }
         }.getOrNull(),
     )
+
+    /**
+     * Registers a location-aware callback for the captured Wi-Fi network and reads its first fresh
+     * capabilities event. Synchronous `getNetworkCapabilities` redacts `WifiInfo` on modern Android.
+     */
+    suspend fun readForNetwork(connectivityManager: ConnectivityManager, capturedNetwork: Network): RadioSnapshot =
+        suspendCancellableCoroutine { continuation ->
+            val finished = AtomicBoolean(false)
+            val callbackRef = AtomicReference<ConnectivityManager.NetworkCallback?>()
+            fun unregister() {
+                callbackRef.get()?.let { callback ->
+                    runCatching { connectivityManager.unregisterNetworkCallback(callback) }
+                }
+            }
+            fun finish(snapshot: RadioSnapshot) {
+                if (!finished.compareAndSet(false, true)) return
+                unregister()
+                if (continuation.isActive) continuation.resume(snapshot)
+            }
+
+            val callback = object : ConnectivityManager.NetworkCallback(
+                ConnectivityManager.NetworkCallback.FLAG_INCLUDE_LOCATION_INFO,
+            ) {
+                override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+                    if (!sameNetworkHandle(capturedNetwork, network)) return
+                    val snapshot = runCatching {
+                        val info = networkCapabilities.transportInfo as? WifiInfo
+                        if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) read(info) else read(null)
+                    }.getOrElse { read(null) }
+                    finish(snapshot)
+                }
+
+                override fun onLost(network: Network) {
+                    if (sameNetworkHandle(capturedNetwork, network)) finish(read(null))
+                }
+            }
+            callbackRef.set(callback)
+            continuation.invokeOnCancellation {
+                if (finished.compareAndSet(false, true)) unregister()
+            }
+
+            if (!continuation.isActive) {
+                unregister()
+                return@suspendCancellableCoroutine
+            }
+            try {
+                connectivityManager.registerNetworkCallback(
+                    NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build(),
+                    callback,
+                )
+                if (!continuation.isActive) unregister()
+            } catch (_: SecurityException) {
+                finish(read(null))
+            } catch (_: RuntimeException) {
+                finish(read(null))
+            }
+        }
 
     companion object {
         const val INVALID_RSSI = -127

@@ -1,6 +1,7 @@
 package com.heatnet.data.db
 
 import androidx.room.Entity
+import androidx.room.ColumnInfo
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -48,6 +49,7 @@ data class ReadingEntity(
     val wifiChannel: Int?,
     val bssid: String?,
     val networkType: String?,
+    @ColumnInfo(defaultValue = "0") val isDemo: Boolean = false,
 )
 
 data class SessionSummaryRow(

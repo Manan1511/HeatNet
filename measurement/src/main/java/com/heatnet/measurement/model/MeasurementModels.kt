@@ -66,5 +66,6 @@ data class MeasurementResult(
     val wifiChannel: Int? = null,
     val bssid: String? = null,
     val networkType: String? = null,
+    val isDemo: Boolean = false,
     val issues: List<MeasurementIssue> = emptyList(),
 )

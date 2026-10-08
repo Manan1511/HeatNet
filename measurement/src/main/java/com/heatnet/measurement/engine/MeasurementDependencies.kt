@@ -25,6 +25,7 @@ data class MeasurementDependencies(
     val ensureMonitoringStarted: () -> Unit = {},
     val permissionCheck: (ConnectionType) -> PermissionOutcome,
     val readCellularRadio: () -> RadioSnapshot,
+    val readWifiRadio: suspend (Network) -> RadioSnapshot = { RadioSnapshot() },
     val measureThroughput: suspend (Network, TransferDirection, Long, Long) -> ThroughputMeasurement,
     val measureLatency: suspend (Network, MeasurementConfig, Long) -> LatencyMeasurement,
     val measurePacketLoss: suspend (Network, MeasurementConfig, Boolean, Long) -> PacketLossMeasurement,
@@ -54,6 +55,7 @@ data class MeasurementDependencies(
                 ensureMonitoringStarted = connectionMonitor::start,
                 permissionCheck = permissionGate::check,
                 readCellularRadio = cellularReader::read,
+                readWifiRadio = connectionMonitor::readWifiRadio,
                 measureThroughput = { network, direction, budget, deadline ->
                     throughputProbe.measure(network, direction, budget, deadline)
                 },

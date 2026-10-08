@@ -41,6 +41,7 @@ data class Reading(
     val wifiChannel: Int?,
     val bssid: String?,
     val networkType: String?,
+    val isDemo: Boolean = false,
 )
 
 data class SessionWithReadings(

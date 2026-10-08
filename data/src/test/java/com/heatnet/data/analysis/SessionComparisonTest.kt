@@ -1,6 +1,7 @@
 package com.heatnet.data.analysis
 
 import com.heatnet.data.model.Metric
+import com.heatnet.measurement.model.PacketLossMethod
 import com.heatnet.data.reading
 import com.heatnet.data.room
 import com.heatnet.data.sessionOf
@@ -102,5 +103,69 @@ class SessionComparisonTest {
         val c = success(SessionComparison.compare(before, after))
         assertTrue(c.warnings.isEmpty())
         assertNotNull(c.metrics)
+    }
+
+    @Test
+    fun `repeated readings in one area do not outweigh another shared area`() {
+        val beforeReadings = List(8) { index -> reading(1f + index * 0.01f, 1f, download = 10f) } +
+            reading(9f, 7f, download = 100f)
+        val afterReadings = listOf(
+            reading(1f, 1f, sessionId = 2, download = 10f),
+            reading(9f, 7f, sessionId = 2, download = 100f),
+        )
+        val comparison = success(
+            SessionComparison.compare(sessionOf(room(id = 1), *beforeReadings.toTypedArray()), sessionOf(room(id = 2), *afterReadings.toTypedArray())),
+        )
+        val download = metric(comparison, Metric.DOWNLOAD)
+
+        assertEquals(55f, download.before!!.mean, 0.001f)
+        assertEquals(55f, download.after!!.mean, 0.001f)
+        assertEquals(2, download.before.count)
+        assertEquals(Verdict.SIMILAR, download.verdict)
+    }
+
+    @Test
+    fun `sessions without a shared sampled area do not get a raw average comparison`() {
+        val before = sessionOf(room(id = 1), reading(1f, 1f, download = 20f))
+        val after = sessionOf(room(id = 2), reading(9f, 7f, sessionId = 2, download = 100f))
+
+        val comparison = success(SessionComparison.compare(before, after))
+        val download = metric(comparison, Metric.DOWNLOAD)
+
+        assertEquals(Verdict.NOT_ENOUGH_DATA, download.verdict)
+        assertEquals(null, download.before)
+        assertTrue(comparison.warnings.any { it.contains("no shared sampled room areas") })
+    }
+
+    @Test
+    fun `HTTP request failures are excluded from ICMP packet loss comparisons`() {
+        val before = sessionOf(
+            room(id = 1),
+            reading(1f, 1f, loss = 100f).copy(packetLossMethod = PacketLossMethod.HTTP_PROBE_FAILURES),
+            reading(1.2f, 1f, loss = 10f),
+        )
+        val after = sessionOf(
+            room(id = 2),
+            reading(1f, 1f, sessionId = 2, loss = 0f).copy(packetLossMethod = PacketLossMethod.HTTP_PROBE_FAILURES),
+            reading(1.2f, 1f, sessionId = 2, loss = 10f),
+        )
+
+        val comparison = success(SessionComparison.compare(before, after))
+        val loss = metric(comparison, Metric.PACKET_LOSS)
+
+        assertEquals(10f, loss.before!!.mean, 0.001f)
+        assertEquals(10f, loss.after!!.mean, 0.001f)
+        assertEquals(Verdict.SIMILAR, loss.verdict)
+        assertTrue(comparison.warnings.any { it.contains("HTTP request-failure rates") })
+    }
+
+    @Test
+    fun `demo readings are identified in comparison warnings`() {
+        val before = sessionOf(room(id = 1), reading(1f, 1f))
+        val after = sessionOf(room(id = 2), reading(1f, 1f, sessionId = 2).copy(isDemo = true))
+
+        val comparison = success(SessionComparison.compare(before, after))
+
+        assertTrue(comparison.warnings.any { it.contains("simulated demo readings") })
     }
 }

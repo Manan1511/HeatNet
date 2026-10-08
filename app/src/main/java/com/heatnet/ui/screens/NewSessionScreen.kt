@@ -59,12 +59,14 @@ fun NewSessionScreen(container: AppContainer, onBack: () -> Unit, onContinue: (C
 
     var hasLocation by remember { mutableStateOf(locationGranted()) }
     var askedOnce by rememberSaveable { mutableStateOf(false) }
+    var onlyApproximate by rememberSaveable { mutableStateOf(false) }
     LifecycleResumeEffect(Unit) {
         hasLocation = locationGranted()
         onPauseOrDispose { }
     }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        hasLocation = granted
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+        hasLocation = WifiLocationPermissionPolicy.hasRequiredPermission(grants)
+        onlyApproximate = WifiLocationPermissionPolicy.isApproximateOnly(grants)
         askedOnce = true
     }
 
@@ -125,7 +127,15 @@ fun NewSessionScreen(container: AppContainer, onBack: () -> Unit, onContinue: (C
                                 "that have location permission. HeatNet does not use your location.",
                             style = MaterialTheme.typography.bodyMedium,
                         )
-                        Button(onClick = { launcher.launch(Manifest.permission.ACCESS_FINE_LOCATION) }) {
+                        if (onlyApproximate) {
+                            Text(
+                                "You allowed only approximate location. Wi-Fi details need precise location: " +
+                                    "tap Allow location again and choose Precise.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                        Button(onClick = { launcher.launch(WifiLocationPermissionPolicy.requestPermissions) }) {
                             Text("Allow location")
                         }
                         if (askedOnce) {

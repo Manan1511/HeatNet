@@ -67,6 +67,7 @@ class FakeMeasurementSource(
             wifiChannel = if (wifi) 36 else null,
             bssid = if (wifi) "02:00:00:00:00:01" else null,
             networkType = if (wifi) null else "LTE",
+            isDemo = true,
         )
     }
 

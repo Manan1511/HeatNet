@@ -1,13 +1,10 @@
 package com.heatnet.measurement.network
 
-import com.heatnet.measurement.radio.RadioSnapshot
-
 internal data class NetworkObservation<N>(
     val network: N?,
     val transports: Set<NetworkTransport>,
     val hasValidatedInternet: Boolean,
     val hasTransportObservation: Boolean = false,
-    val wifiRadioSnapshot: RadioSnapshot? = null,
 )
 
 internal interface NetworkEventsCallback<N> {
@@ -16,7 +13,6 @@ internal interface NetworkEventsCallback<N> {
         network: N,
         transports: Set<NetworkTransport>,
         hasValidatedInternet: Boolean,
-        wifiRadioSnapshot: RadioSnapshot? = null,
     )
     fun onLost(network: N)
 }
@@ -37,7 +33,6 @@ internal class DefaultNetworkMonitorCore<N>(
     private var transports: Set<NetworkTransport> = emptySet()
     private var hasValidatedInternet = false
     private var hasTransportObservation = false
-    private var wifiRadioSnapshot: RadioSnapshot? = null
 
     fun start() {
         synchronized(lock) {
@@ -50,7 +45,6 @@ internal class DefaultNetworkMonitorCore<N>(
                         transports = emptySet()
                         hasValidatedInternet = false
                         hasTransportObservation = false
-                        wifiRadioSnapshot = null
                         publish()
                     }
                 }
@@ -59,14 +53,11 @@ internal class DefaultNetworkMonitorCore<N>(
                     network: N,
                     transports: Set<NetworkTransport>,
                     hasValidatedInternet: Boolean,
-                    wifiRadioSnapshot: RadioSnapshot?,
                 ) = updateForCurrentCallback(this) {
                     if (network == activeNetwork) {
                         this@DefaultNetworkMonitorCore.transports = transports.toSet()
                         this@DefaultNetworkMonitorCore.hasValidatedInternet = hasValidatedInternet
                         this@DefaultNetworkMonitorCore.hasTransportObservation = true
-                        this@DefaultNetworkMonitorCore.wifiRadioSnapshot =
-                            wifiRadioSnapshot.takeIf { NetworkTransport.WIFI in transports }
                         publish()
                     }
                 }
@@ -77,7 +68,6 @@ internal class DefaultNetworkMonitorCore<N>(
                         transports = emptySet()
                         hasValidatedInternet = false
                         hasTransportObservation = false
-                        wifiRadioSnapshot = null
                         publish()
                     }
                 }
@@ -101,7 +91,6 @@ internal class DefaultNetworkMonitorCore<N>(
             transports = emptySet()
             hasValidatedInternet = false
             hasTransportObservation = false
-            wifiRadioSnapshot = null
             try {
                 registrar.unregister(callback)
             } finally {
@@ -126,7 +115,6 @@ internal class DefaultNetworkMonitorCore<N>(
                 transports,
                 hasValidatedInternet,
                 hasTransportObservation,
-                wifiRadioSnapshot,
             ),
         )
     }
