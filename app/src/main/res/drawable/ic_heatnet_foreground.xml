@@ -1,0 +1,18 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:left="17dp"
+        android:top="27dp"
+        android:right="17dp"
+        android:bottom="27dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <gradient
+                android:angle="0"
+                android:centerColor="#EED77E"
+                android:endColor="#39BBAA"
+                android:startColor="#F08D98"
+                android:type="linear" />
+        </shape>
+    </item>
+    <item android:drawable="@drawable/ic_heatnet_markers" />
+</layer-list>
