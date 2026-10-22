@@ -6,7 +6,6 @@ import com.heatnet.measurement.model.PacketLossMethod
 import kotlinx.coroutines.runBlocking
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
-import okhttp3.OkHttpClient
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -15,6 +14,7 @@ class HttpLossProbeTest {
     @Test
     fun countsTwentyStartedHttpProbesAndUsesTheirFailurePercentage() = runBlocking {
         val server = MockWebServer()
+        val client = TestSslUtils.configureHttps(server)
         server.start()
         try {
             repeat(18) { server.enqueue(MockResponse()) }
@@ -24,7 +24,7 @@ class HttpLossProbeTest {
                 httpFallbackProbeCount = 20,
             )
 
-            val result = HttpLossProbe().measureWithClient(OkHttpClient(), config, deadline())
+            val result = HttpLossProbe().measureWithClient(client, config, deadline())
 
             assertEquals(PacketLossMethod.HTTP_PROBE_FAILURES, result.method)
             assertEquals(20, result.attemptedProbes)
@@ -44,6 +44,7 @@ class HttpLossProbeTest {
     @Test
     fun excludesUnstartedFallbackAttemptsFromTheDenominator() = runBlocking {
         val server = MockWebServer()
+        val client = TestSslUtils.configureHttps(server)
         server.enqueue(MockResponse())
         server.enqueue(MockResponse.Builder().code(503).build())
         server.start()
@@ -51,7 +52,7 @@ class HttpLossProbeTest {
             val base = System.nanoTime()
             val clock = AdvancingClock(base, stepNanos = 2_000_000_000L)
             val result = HttpLossProbe(clock = clock).measureWithClient(
-                OkHttpClient(),
+                client,
                 MeasurementConfig(
                     latencyUrl = server.url("/probe").toString(),
                     httpFallbackProbeCount = 20,
@@ -72,10 +73,11 @@ class HttpLossProbeTest {
     @Test
     fun expiredDeadlineWithNoStartedRequestIsUnavailable() = runBlocking {
         val server = MockWebServer()
+        val client = TestSslUtils.configureHttps(server)
         server.start()
         try {
             val result = HttpLossProbe().measureWithClient(
-                OkHttpClient(),
+                client,
                 MeasurementConfig(latencyUrl = server.url("/probe").toString()),
                 deadlineNanos = 0L,
             )

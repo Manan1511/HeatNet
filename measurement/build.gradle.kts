@@ -32,6 +32,8 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.mockwebserver3)
+    testImplementation(libs.okhttp.tls)
+    testImplementation("org.mockito:mockito-core:5.11.0")
 
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.runner)
