@@ -24,7 +24,7 @@ class ReadingProvenanceMigrationTest {
             .addMigrations(HeatNetDatabase.MIGRATION_1_2)
             .build()
         try {
-            val cursor = migrated.openHelper.writableDatabase.query("SELECT isDemo FROM readings WHERE id = 1")
+            val cursor = migrated.openHelper.writableDatabase.query("SELECT isDemo FROM readings WHERE id = ?", arrayOf(1))
             cursor.use {
                 assertEquals(1, it.count)
                 it.moveToFirst()
