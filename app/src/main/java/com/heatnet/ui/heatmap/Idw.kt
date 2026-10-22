@@ -49,11 +49,17 @@ object Idw {
     fun interpolate(samples: List<Sample>, x: Float, y: Float, power: Float): Float {
         var weightedSum = 0.0
         var weightTotal = 0.0
+        val isPowerTwo = power == 2.0f
         val powerDouble = power.toDouble()
         for (s in samples) {
             val d = hypot(s.x - x, s.y - y)
             if (d < EXACT_HIT_METRES) return s.value
-            val w = 1.0 / d.toDouble().pow(powerDouble)
+            val dDouble = d.toDouble()
+            val w = if (isPowerTwo) {
+                1.0 / (dDouble * dDouble)
+            } else {
+                1.0 / dDouble.pow(powerDouble)
+            }
             weightedSum += w * s.value
             weightTotal += w
         }
@@ -84,6 +90,7 @@ object Idw {
         val diagonal = hypot(widthMetres, heightMetres)
         val values = FloatArray(cols * rows) { Float.NaN }
         val alphas = FloatArray(cols * rows)
+        val isPowerTwo = config.power == 2.0f
         val powerDouble = config.power.toDouble()
         for (r in 0 until rows) {
             val y = (r + 0.5f) * cell
@@ -108,8 +115,11 @@ object Idw {
                             exactHit = true
                             exactHitValue = s.value
                         } else {
-                            val d = kotlin.math.sqrt(dSquared)
-                            val w = 1.0 / d.toDouble().pow(powerDouble)
+                            val w = if (isPowerTwo) {
+                                1.0 / dSquared.toDouble()
+                            } else {
+                                1.0 / kotlin.math.sqrt(dSquared).toDouble().pow(powerDouble)
+                            }
                             weightedSum += w * s.value
                             weightTotal += w
                         }
