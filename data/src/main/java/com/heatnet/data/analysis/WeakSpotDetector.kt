@@ -156,8 +156,18 @@ object WeakSpotDetector {
         share: Float,
         isWeak: (Float) -> Boolean,
     ): Boolean {
-        val values = readings.mapNotNull(value).filter(Float::isFinite)
-        if (values.isEmpty()) return false
-        return values.count(isWeak).toFloat() / values.size >= share
+        var validCount = 0
+        var weakCount = 0
+        for (i in readings.indices) {
+            val v = value(readings[i])
+            if (v != null && v.isFinite()) {
+                validCount++
+                if (isWeak(v)) {
+                    weakCount++
+                }
+            }
+        }
+        if (validCount == 0) return false
+        return weakCount.toFloat() / validCount >= share
     }
 }
