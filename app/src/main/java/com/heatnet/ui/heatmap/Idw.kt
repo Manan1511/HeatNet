@@ -94,18 +94,21 @@ object Idw {
 
                 var weightedSum = 0.0
                 var weightTotal = 0.0
-                var minDistance = Float.MAX_VALUE
+                var minDistanceSq = Float.MAX_VALUE
                 var exactHit = false
                 var exactHitValue = 0f
 
                 for (s in samples) {
-                    val d = hypot(s.x - x, s.y - y)
-                    if (d < minDistance) minDistance = d
+                    val dx = s.x - x
+                    val dy = s.y - y
+                    val dSquared = dx * dx + dy * dy
+                    if (dSquared < minDistanceSq) minDistanceSq = dSquared
                     if (!exactHit) {
-                        if (d < EXACT_HIT_METRES) {
+                        if (dSquared < EXACT_HIT_METRES_SQ) {
                             exactHit = true
                             exactHitValue = s.value
                         } else {
+                            val d = kotlin.math.sqrt(dSquared)
                             val w = 1.0 / d.toDouble().pow(powerDouble)
                             weightedSum += w * s.value
                             weightTotal += w
@@ -114,11 +117,12 @@ object Idw {
                 }
 
                 values[i] = if (exactHit) exactHitValue else (weightedSum / weightTotal).toFloat()
-                alphas[i] = fadeAlpha(minDistance, diagonal, config)
+                alphas[i] = fadeAlpha(kotlin.math.sqrt(minDistanceSq), diagonal, config)
             }
         }
         return HeatmapGrid(cols, rows, cell, values, alphas)
     }
 
     private const val EXACT_HIT_METRES = 1e-4f
+    private const val EXACT_HIT_METRES_SQ = EXACT_HIT_METRES * EXACT_HIT_METRES
 }
