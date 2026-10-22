@@ -64,4 +64,29 @@ class IdwTest {
         val middle = Idw.fadeAlpha(2f, diagonal, config)
         assertTrue(middle < config.maxAlpha && middle > config.minAlpha)
     }
+
+    @Test
+    fun customPowerAndPowerTwoCalculationsAreConsistent() {
+        val samples = listOf(Sample(1f, 1f, 20f), Sample(9f, 2f, 80f), Sample(5f, 9f, 50f))
+
+        // Check interpolate with power 2 vs power 3
+        val interpolated2 = Idw.interpolate(samples, 3f, 3f, 2f)
+        val interpolated3 = Idw.interpolate(samples, 3f, 3f, 3f)
+        assertTrue(interpolated2 in 20f..80f)
+        assertTrue(interpolated3 in 20f..80f)
+
+        // Check computeGrid with default power (2.0) vs custom power (3.0)
+        val grid2 = Idw.computeGrid(room, 10f, 10f, samples, HeatmapConfig(power = 2f))!!
+        val grid3 = Idw.computeGrid(room, 10f, 10f, samples, HeatmapConfig(power = 3f))!!
+
+        assertEquals(grid2.values.size, grid3.values.size)
+        for (i in grid2.values.indices) {
+            if (grid2.values[i].isNaN()) {
+                assertTrue(grid3.values[i].isNaN())
+            } else {
+                assertTrue(grid2.values[i] in 20f..80f)
+                assertTrue(grid3.values[i] in 20f..80f)
+            }
+        }
+    }
 }
