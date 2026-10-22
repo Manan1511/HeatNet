@@ -105,6 +105,30 @@ object SessionComparison {
         return if (better) Verdict.IMPROVED else Verdict.WORSE
     }
 
+    private class SessionWarningInfo(
+        val bssids: Set<String>,
+        val cells: Set<RoomCell>,
+        val hasDemo: Boolean,
+        val hasHttpPacketLoss: Boolean,
+    )
+
+    private fun extractWarningInfo(data: SessionWithReadings): SessionWarningInfo {
+        val bssids = HashSet<String>()
+        val cells = HashSet<RoomCell>()
+        var hasDemo = false
+        var hasHttpPacketLoss = false
+
+        for (reading in data.readings) {
+            reading.bssid?.let { bssids.add(it) }
+            cellFor(data, reading)?.let { cells.add(it) }
+            if (reading.isDemo) hasDemo = true
+            if (reading.packetLossPct != null && reading.packetLossMethod == PacketLossMethod.HTTP_PROBE_FAILURES) {
+                hasHttpPacketLoss = true
+            }
+        }
+        return SessionWarningInfo(bssids, cells, hasDemo, hasHttpPacketLoss)
+    }
+
     private fun warningsFor(before: SessionWithReadings, after: SessionWithReadings): List<String> {
         val warnings = mutableListOf<String>()
         val a = before.session
@@ -112,23 +136,19 @@ object SessionComparison {
         if (differsByMoreThan(a.widthMetres, b.widthMetres) || differsByMoreThan(a.heightMetres, b.heightMetres)) {
             warnings += "The room outlines differ in size, so these may not be the same room."
         }
-        val beforeBssids = before.readings.mapNotNull { it.bssid }.toSet()
-        val afterBssids = after.readings.mapNotNull { it.bssid }.toSet()
-        if (beforeBssids.isNotEmpty() && afterBssids.isNotEmpty() && beforeBssids.intersect(afterBssids).isEmpty()) {
+        val beforeInfo = extractWarningInfo(before)
+        val afterInfo = extractWarningInfo(after)
+
+        if (beforeInfo.bssids.isNotEmpty() && afterInfo.bssids.isNotEmpty() && beforeInfo.bssids.none { it in afterInfo.bssids }) {
             warnings += "The sessions were measured on different access points."
         }
-        val beforeCells = before.readings.mapNotNull { cellFor(before, it) }.toSet()
-        val afterCells = after.readings.mapNotNull { cellFor(after, it) }.toSet()
-        if (beforeCells.intersect(afterCells).isEmpty()) {
+        if (beforeInfo.cells.none { it in afterInfo.cells }) {
             warnings += "The sessions have no shared sampled room areas; add readings in matching areas to compare them."
         }
-        if ((before.readings + after.readings).any { it.isDemo }) {
+        if (beforeInfo.hasDemo || afterInfo.hasDemo) {
             warnings += "At least one session includes simulated demo readings; results are not field measurements."
         }
-        if ((before.readings + after.readings).any {
-                it.packetLossPct != null && it.packetLossMethod == PacketLossMethod.HTTP_PROBE_FAILURES
-            }
-        ) {
+        if (beforeInfo.hasHttpPacketLoss || afterInfo.hasHttpPacketLoss) {
             warnings += "HTTP request-failure rates are application-level probes and are not compared as ICMP packet loss."
         }
         return warnings
