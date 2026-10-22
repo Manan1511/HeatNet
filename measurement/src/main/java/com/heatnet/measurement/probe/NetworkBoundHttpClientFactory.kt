@@ -1,6 +1,7 @@
 package com.heatnet.measurement.probe
 
 import android.net.Network
+import okhttp3.ConnectionSpec
 import okhttp3.CookieJar
 import okhttp3.Dns
 import okhttp3.OkHttpClient
@@ -14,5 +15,6 @@ class NetworkBoundHttpClientFactory {
         .followRedirects(false)
         .followSslRedirects(false)
         .retryOnConnectionFailure(false)
+        .connectionSpecs(listOf(ConnectionSpec.RESTRICTED_TLS, ConnectionSpec.MODERN_TLS))
         .build()
 }

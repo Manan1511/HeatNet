@@ -74,6 +74,7 @@ class LatencyProbe private constructor(
 
 internal fun withByteCount(url: String, bytes: Long): String {
     val parsed = requireNotNull(url.toHttpUrlOrNull()) { "Probe endpoint must be an HTTP URL" }
+    require(parsed.isHttps) { "Probe endpoint must use HTTPS" }
     return parsed.newBuilder().setQueryParameter("bytes", bytes.toString()).build().toString()
 }
 

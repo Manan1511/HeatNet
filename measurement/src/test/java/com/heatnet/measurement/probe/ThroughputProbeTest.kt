@@ -6,7 +6,6 @@ import mockwebserver3.Dispatcher
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import mockwebserver3.RecordedRequest
-import okhttp3.OkHttpClient
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -21,6 +20,7 @@ class ThroughputProbeTest {
     @Test
     fun respectsSharedDirectionBudget() = runBlocking {
         val server = MockWebServer()
+        val client = TestSslUtils.configureHttps(server)
         val dispatcher = ParallelBodyDispatcher(expectedConcurrentRequests = 2, responseBytes = 100)
         server.dispatcher = dispatcher
         server.start()
@@ -33,8 +33,8 @@ class ThroughputProbeTest {
             )
             val probe = ThroughputProbe(config, clock = LatencyProbeTest.StepProbeClock())
 
-            val download = probe.measureWithClient(OkHttpClient(), TransferDirection.DOWNLOAD, 100, deadline())
-            val upload = probe.measureWithClient(OkHttpClient(), TransferDirection.UPLOAD, 100, deadline())
+            val download = probe.measureWithClient(client, TransferDirection.DOWNLOAD, 100, deadline())
+            val upload = probe.measureWithClient(client, TransferDirection.UPLOAD, 100, deadline())
 
             assertEquals(100L, download.payloadBytes)
             assertEquals(100L, upload.payloadBytes)
@@ -60,13 +60,14 @@ class ThroughputProbeTest {
     @Test
     fun budgetTruncationIsPartial() = runBlocking {
         val server = MockWebServer()
+        val client = TestSslUtils.configureHttps(server)
         server.enqueue(MockResponse.Builder().body("short body one").build())
         server.enqueue(MockResponse.Builder().body("short body two").build())
         server.start()
         try {
             val config = MeasurementConfig(downloadUrl = server.url("/down").toString(), parallelStreams = 2)
             val result = ThroughputProbe(config, clock = LatencyProbeTest.StepProbeClock()).measureWithClient(
-                OkHttpClient(),
+                client,
                 TransferDirection.DOWNLOAD,
                 1_024,
                 deadline(),
@@ -84,13 +85,14 @@ class ThroughputProbeTest {
     @Test
     fun capsCallerBudgetToConfiguredPerDirectionMaximum() = runBlocking {
         val server = MockWebServer()
+        val client = TestSslUtils.configureHttps(server)
         server.dispatcher = ParallelBodyDispatcher(expectedConcurrentRequests = 2, responseBytes = 4 * 1024 * 1024)
         server.start()
         try {
             val maximum = 64L
             val config = MeasurementConfig(downloadUrl = server.url("/down").toString(), maxBytesPerDirection = maximum)
             val result = ThroughputProbe(config, clock = LatencyProbeTest.StepProbeClock()).measureWithClient(
-                OkHttpClient(),
+                client,
                 TransferDirection.DOWNLOAD,
                 Long.MAX_VALUE,
                 deadline(),
@@ -105,13 +107,14 @@ class ThroughputProbeTest {
     @Test
     fun httpFailureReturnsAnIssueAndKeepsPayloadUnavailable() = runBlocking {
         val server = MockWebServer()
+        val client = TestSslUtils.configureHttps(server)
         server.enqueue(MockResponse.Builder().code(503).build())
         server.enqueue(MockResponse.Builder().code(503).build())
         server.start()
         try {
             val config = MeasurementConfig(downloadUrl = server.url("/down").toString(), parallelStreams = 2)
             val result = ThroughputProbe(config, clock = LatencyProbeTest.StepProbeClock()).measureWithClient(
-                OkHttpClient(),
+                client,
                 TransferDirection.DOWNLOAD,
                 100,
                 deadline(),
@@ -130,6 +133,7 @@ class ThroughputProbeTest {
     @Test
     fun uploadRedirectDoesNotReplayPayloadOrExceedItsBudget() = runBlocking {
         val server = MockWebServer()
+        val client = TestSslUtils.configureHttps(server)
         server.enqueue(MockResponse.Builder().code(307).addHeader("Location", "/replay").build())
         server.enqueue(MockResponse())
         server.start()
@@ -140,7 +144,7 @@ class ThroughputProbeTest {
                 parallelStreams = 1,
             )
             val result = ThroughputProbe(config, clock = LatencyProbeTest.StepProbeClock()).measureWithClient(
-                OkHttpClient(),
+                client,
                 TransferDirection.UPLOAD,
                 100,
                 deadline(),
@@ -159,6 +163,7 @@ class ThroughputProbeTest {
     @Test
     fun downloadFailureAfterReceivingBytesPreservesThePartialPayload() = runBlocking {
         val server = MockWebServer()
+        val client = TestSslUtils.configureHttps(server)
         server.enqueue(
             MockResponse.Builder()
                 .body("x".repeat(20))
@@ -175,7 +180,7 @@ class ThroughputProbeTest {
         try {
             val config = MeasurementConfig(downloadUrl = server.url("/down").toString(), parallelStreams = 2)
             val result = ThroughputProbe(config, clock = LatencyProbeTest.StepProbeClock()).measureWithClient(
-                OkHttpClient(),
+                client,
                 TransferDirection.DOWNLOAD,
                 100,
                 System.nanoTime() + 500_000_000L,
