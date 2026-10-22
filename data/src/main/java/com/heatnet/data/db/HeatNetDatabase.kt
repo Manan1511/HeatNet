@@ -25,9 +25,11 @@ abstract class HeatNetDatabase : RoomDatabase() {
                 ).addMigrations(MIGRATION_1_2).build().also { instance = it }
             }
 
+        private const val MIGRATION_1_2_SQL = "ALTER TABLE readings ADD COLUMN isDemo INTEGER NOT NULL DEFAULT 0"
+
         val MIGRATION_1_2: Migration = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE readings ADD COLUMN isDemo INTEGER NOT NULL DEFAULT 0")
+                db.execSQL(MIGRATION_1_2_SQL)
             }
         }
     }
