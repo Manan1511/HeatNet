@@ -75,6 +75,7 @@ internal fun buildPingCommand(
         "-c", count.toString(),
         "-i", intervalSeconds,
         "-W", "1",
+        "--",
         route.hostAddress,
     )
 }
