@@ -143,10 +143,38 @@ object WeakSpotDetector {
         return "${what.replaceFirstChar { it.uppercase() }} in the ${quadrant.label} corner"
     }
 
-    private fun centreOf(session: Session, readings: List<Reading>): Point {
-        val xs = session.outline.map { it.x }.ifEmpty { readings.map { it.x } }
-        val ys = session.outline.map { it.y }.ifEmpty { readings.map { it.y } }
-        return Point((xs.min() + xs.max()) / 2f, (ys.min() + ys.max()) / 2f)
+    internal fun centreOf(session: Session, readings: List<Reading>): Point {
+        var minX = Float.POSITIVE_INFINITY
+        var maxX = Float.NEGATIVE_INFINITY
+        var minY = Float.POSITIVE_INFINITY
+        var maxY = Float.NEGATIVE_INFINITY
+
+        val points = session.outline
+        if (points.isNotEmpty()) {
+            for (i in points.indices) {
+                val p = points[i]
+                val x = p.x
+                val y = p.y
+                if (x < minX) minX = x
+                if (x > maxX) maxX = x
+                if (y < minY) minY = y
+                if (y > maxY) maxY = y
+            }
+        } else if (readings.isNotEmpty()) {
+            for (i in readings.indices) {
+                val r = readings[i]
+                val x = r.x
+                val y = r.y
+                if (x < minX) minX = x
+                if (x > maxX) maxX = x
+                if (y < minY) minY = y
+                if (y > maxY) maxY = y
+            }
+        } else {
+            return Point(0f, 0f)
+        }
+
+        return Point((minX + maxX) / 2f, (minY + maxY) / 2f)
     }
 
     /** True when the share of readings (that have this metric) failing [isWeak] reaches [share]. */
