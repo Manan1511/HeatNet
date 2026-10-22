@@ -44,6 +44,9 @@ import com.heatnet.ui.heatmap.HeatmapLegend
 import com.heatnet.ui.heatmap.HeatmapView
 import com.heatnet.ui.heatmap.MetricScale
 import com.heatnet.ui.heatmap.displayLabel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 
 private sealed interface CompareLoad {
     data object Loading : CompareLoad
@@ -59,8 +62,12 @@ private sealed interface CompareLoad {
 @Composable
 fun CompareScreen(container: AppContainer, beforeId: Long, afterId: Long, onBack: () -> Unit) {
     val load by produceState<CompareLoad>(CompareLoad.Loading, beforeId, afterId) {
-        val before = container.repository.load(beforeId)
-        val after = container.repository.load(afterId)
+        val (before, after) = coroutineScope {
+            awaitAll(
+                async { container.repository.load(beforeId) },
+                async { container.repository.load(afterId) },
+            )
+        }
         value = if (before == null || after == null) {
             CompareLoad.Missing
         } else {
