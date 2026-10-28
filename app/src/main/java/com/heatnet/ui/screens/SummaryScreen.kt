@@ -30,6 +30,7 @@ import com.heatnet.data.analysis.WeakSpotReport
 import com.heatnet.ui.AppContainer
 import com.heatnet.ui.theme.AuroraBackground
 import com.heatnet.ui.theme.Brand
+import com.heatnet.ui.theme.CountUpText
 import com.heatnet.ui.theme.HeatNetTopBar
 import com.heatnet.ui.theme.PrimaryButton
 import com.heatnet.ui.theme.SecondaryButton
@@ -68,10 +69,7 @@ fun SummaryScreen(container: AppContainer, sessionId: Long, onBackToMap: () -> U
             ) {
                 StatusPill("Saved on this phone", pulsing = false)
                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        "$count",
-                        style = MaterialTheme.typography.displayMedium.copy(brush = Brand.gradient),
-                    )
+                    CountUpText(count, MaterialTheme.typography.displayMedium.copy(brush = Brand.gradient))
                     Text(
                         if (count == 1) "reading" else "readings",
                         modifier = Modifier.padding(bottom = 8.dp),

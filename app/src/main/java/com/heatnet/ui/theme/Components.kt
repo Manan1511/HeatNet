@@ -80,6 +80,7 @@ fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifi
             .height(56.dp)
             .clip(CircleShape)
             .background(brush = fill, shape = CircleShape)
+            .starBorder(enabled)
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -168,6 +169,7 @@ fun AuroraBackground(modifier: Modifier = Modifier, content: @Composable BoxScop
             glow(w * (0.95f - 0.25f * t), h * (0.34f + 0.10f * t), w * 0.8f, Brand.Sky)
             glow(w * (0.25f + 0.2f * t), h * (0.98f - 0.1f * t), w * 0.9f, Brand.Blue)
         }
+        Particles(color = if (dark) Color.White.copy(alpha = 0.55f) else Brand.Blue.copy(alpha = 0.35f))
         content()
     }
 }

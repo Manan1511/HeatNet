@@ -25,6 +25,8 @@ import androidx.compose.ui.unit.dp
 import com.heatnet.ui.AppContainer
 import com.heatnet.ui.theme.AuroraBackground
 import com.heatnet.ui.theme.Brand
+import com.heatnet.ui.theme.FlowingGradientText
+import com.heatnet.ui.theme.Reveal
 import com.heatnet.ui.theme.HeatHero
 import com.heatnet.ui.theme.PrimaryButton
 import com.heatnet.ui.theme.SecondaryButton
@@ -44,26 +46,29 @@ fun HomeScreen(container: AppContainer, onNewSession: () -> Unit, onSavedSession
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
                 Spacer(Modifier.height(8.dp))
-                StatusPill("Network heatmaps", pulsing = true)
-                Text(
-                    "HeatNet",
-                    style = MaterialTheme.typography.displayMedium.copy(brush = Brand.gradient),
-                )
-                Text(
-                    "See exactly where your Wi-Fi or mobile data is strong, and where it drops out.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                HeatHero()
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StepTile("1", "Draw", "your room", Modifier.weight(1f))
-                    StepTile("2", "Measure", "each spot", Modifier.weight(1f))
-                    StepTile("3", "See", "the map", Modifier.weight(1f))
+                Reveal { StatusPill("Network heatmaps", pulsing = true) }
+                Reveal(delayMillis = 80) {
+                    FlowingGradientText("HeatNet", MaterialTheme.typography.displayMedium)
+                }
+                Reveal(delayMillis = 160) {
+                    Text(
+                        "See exactly where your Wi-Fi or mobile data is strong, and where it drops out.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Reveal(delayMillis = 240) { HeatHero() }
+                Reveal(delayMillis = 320) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        StepTile("1", "Draw", "your room", Modifier.weight(1f))
+                        StepTile("2", "Measure", "each spot", Modifier.weight(1f))
+                        StepTile("3", "See", "the map", Modifier.weight(1f))
+                    }
                 }
                 Spacer(Modifier.height(4.dp))
-                PrimaryButton("Start a new map", onNewSession)
-                SecondaryButton("Saved sessions", onSavedSessions, Modifier.fillMaxWidth())
-                SurfaceCard(Modifier.fillMaxWidth()) {
+                Reveal(delayMillis = 400) { PrimaryButton("Start a new map", onNewSession) }
+                Reveal(delayMillis = 460) { SecondaryButton("Saved sessions", onSavedSessions, Modifier.fillMaxWidth()) }
+                Reveal(delayMillis = 520) { SurfaceCard(Modifier.fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text("Demo mode", style = MaterialTheme.typography.titleSmall)
@@ -78,7 +83,7 @@ fun HomeScreen(container: AppContainer, onNewSession: () -> Unit, onSavedSession
                             onCheckedChange = { container.useFakeMeasurements = it },
                         )
                     }
-                }
+                } }
                 Spacer(Modifier.height(8.dp))
             }
         }
