@@ -34,7 +34,7 @@
 
 ## How comparison works
 
-- Only sessions on the same connection type can be compared. Two Wi-Fi sessions, or two mobile sessions.
+- Any two sessions can be compared. For mixed Wi-Fi and mobile sessions, shared internet metrics are compared; signal maps use separate scales.
 - Both sessions need at least one reading. The same session cannot be compared with itself.
 - Each room is divided into a 4×4 grid. Only cells that **both** sessions sampled are compared. This keeps the comparison fair when readings were taken in different places.
 - For each metric it gives the before mean, the after mean and the difference.
@@ -76,8 +76,8 @@ If one session sampled the kitchen and the other the bedroom, comparing their av
 **9. Why a 5% "similar" band?**
 Network measurements are noisy. Small differences should not be reported as improvements.
 
-**10. Why must both sessions have the same connection type?**
-Wi-Fi and mobile data use different technologies and signal scales, so their numbers are not comparable.
+**10. Can Wi-Fi and mobile sessions be compared?**
+Yes. Shared internet measurements are compared. Their radio signal maps use separate scales because the technologies differ.
 
 **11. What is `isDemo`?**
 It is a compatibility flag for simulated readings saved by older app versions. The current app has no demo-reading mode and creates new readings from its real measurement engine. Maps and comparisons keep warning users when older simulated readings are present.

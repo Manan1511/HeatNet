@@ -54,15 +54,15 @@ object SessionComparison {
 
     fun compare(before: SessionWithReadings, after: SessionWithReadings): ComparisonResult {
         if (before.session.id == after.session.id) return ComparisonResult.Failure(CompareError.SAME_SESSION)
-        if (before.session.connectionType != after.session.connectionType) {
-            return ComparisonResult.Failure(CompareError.DIFFERENT_CONNECTION_TYPE)
-        }
         if (before.readings.isEmpty() || after.readings.isEmpty()) {
             return ComparisonResult.Failure(CompareError.NO_READINGS)
         }
 
         val warnings = warningsFor(before, after)
-        val metrics = Metric.availableFor(before.session.connectionType).map { metric ->
+        val mixed = before.session.connectionType != after.session.connectionType
+        val metrics = Metric.availableFor(before.session.connectionType).filter {
+            !mixed || (it != Metric.SIGNAL && it != Metric.LINK_SPEED)
+        }.map { metric ->
             compareMetric(metric, before, after)
         }
         return ComparisonResult.Success(Comparison(before, after, metrics, warnings))

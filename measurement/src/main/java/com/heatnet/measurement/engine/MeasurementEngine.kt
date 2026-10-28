@@ -140,11 +140,12 @@ class MeasurementEngine(
                         }
                     ) return@stages
 
+                    val downloadDeadline = deadlineFrom(dependencies.monotonicNanos(), dependencies.config.overallTimeoutMillis)
                     if (!executeStage(
                             stage = MeasurementStage.DOWNLOAD,
                             routeChanged = routeChanged,
                             captured = captured,
-                            deadlineNanos = deadlineNanos,
+                            deadlineNanos = downloadDeadline,
                             onProgress = onProgress,
                             issues = issues,
                             onValue = {
@@ -156,16 +157,17 @@ class MeasurementEngine(
                                 network,
                                 TransferDirection.DOWNLOAD,
                                 dependencies.config.maxBytesPerDirection,
-                                deadlineNanos,
+                                downloadDeadline,
                             )
                         }
                     ) return@stages
 
+                    val uploadDeadline = deadlineFrom(dependencies.monotonicNanos(), dependencies.config.overallTimeoutMillis)
                     if (!executeStage(
                             stage = MeasurementStage.UPLOAD,
                             routeChanged = routeChanged,
                             captured = captured,
-                            deadlineNanos = deadlineNanos,
+                            deadlineNanos = uploadDeadline,
                             onProgress = onProgress,
                             issues = issues,
                             onValue = {
@@ -177,16 +179,17 @@ class MeasurementEngine(
                                 network,
                                 TransferDirection.UPLOAD,
                                 dependencies.config.maxBytesPerDirection,
-                                deadlineNanos,
+                                uploadDeadline,
                             )
                         }
                     ) return@stages
 
+                    val latencyDeadline = deadlineFrom(dependencies.monotonicNanos(), dependencies.config.overallTimeoutMillis)
                     if (!executeStage(
                             stage = MeasurementStage.LATENCY,
                             routeChanged = routeChanged,
                             captured = captured,
-                            deadlineNanos = deadlineNanos,
+                            deadlineNanos = latencyDeadline,
                             onProgress = onProgress,
                             issues = issues,
                             onValue = {
@@ -194,15 +197,16 @@ class MeasurementEngine(
                                 issues += it.issues
                             },
                         ) {
-                            dependencies.measureLatency(network, dependencies.config, deadlineNanos)
+                            dependencies.measureLatency(network, dependencies.config, latencyDeadline)
                         }
                     ) return@stages
 
+                    val lossDeadline = deadlineFrom(dependencies.monotonicNanos(), dependencies.config.overallTimeoutMillis)
                     if (!executeStage(
                             stage = MeasurementStage.PACKET_LOSS,
                             routeChanged = routeChanged,
                             captured = captured,
-                            deadlineNanos = deadlineNanos,
+                            deadlineNanos = lossDeadline,
                             onProgress = onProgress,
                             issues = issues,
                             onValue = {
@@ -213,14 +217,13 @@ class MeasurementEngine(
                             val httpReachable = (download?.successfulStreams ?: 0) > 0 ||
                                 (upload?.successfulStreams ?: 0) > 0 ||
                                 (latency?.successfulRequests ?: 0) > 0
-                            dependencies.measurePacketLoss(network, dependencies.config, httpReachable, deadlineNanos)
+                            dependencies.measurePacketLoss(network, dependencies.config, httpReachable, lossDeadline)
                         }
                     ) return@stages
 
                     when {
                         routeChanged.isCompleted || !sameRoute(captured, dependencies.connectionState.value) ->
                             issues += networkChangedIssue()
-                        dependencies.monotonicNanos() >= deadlineNanos -> issues += timeoutIssue()
                         else -> onProgress(MeasurementProgress(MeasurementStage.COMPLETE))
                     }
                 }
@@ -254,7 +257,7 @@ class MeasurementEngine(
         }
         val remainingNanos = deadlineNanos - dependencies.monotonicNanos()
         if (remainingNanos <= 0L) return@coroutineScope StageOutcome.TimedOut
-        val timeoutMillis = ((remainingNanos - 1L) / NANOS_PER_MILLISECOND) + 1L
+        val timeoutMillis = ((remainingNanos - 1L) / NANOS_PER_MILLISECOND) + 1_001L
         val task = async {
             try {
                 StageOutcome.Value(withTimeout(timeoutMillis) { action() })
@@ -318,7 +321,7 @@ class MeasurementEngine(
         "The active default network changed during the measurement",
     )
 
-    private fun timeoutIssue() = MeasurementIssue(IssueCode.TIMEOUT, "The overall measurement deadline expired")
+    private fun timeoutIssue() = MeasurementIssue(IssueCode.TIMEOUT, "A measurement stage timed out")
 
     private fun endpointFailureIssue() = MeasurementIssue(IssueCode.ENDPOINT_FAILURE, "A measurement probe failed")
 
@@ -345,7 +348,7 @@ class MeasurementEngine(
             }
             StageOutcome.TimedOut -> {
                 issues += timeoutIssue()
-                false
+                true
             }
             is StageOutcome.Failed -> {
                 issues += failureIssue

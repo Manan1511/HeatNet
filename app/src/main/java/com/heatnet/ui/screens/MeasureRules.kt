@@ -29,7 +29,7 @@ object MeasureRules {
                 "You're not on ${sessionType.label} right now. Switch back to take a reading. Nothing was saved."
             IssueCode.UNSUPPORTED_TRANSPORT in codes ->
                 "This connection isn't Wi-Fi or mobile data. Nothing was saved."
-            IssueCode.NO_INTERNET in codes -> "No internet connection. The reading was saved and marked as failed."
+            IssueCode.NO_INTERNET in codes -> "The test could not reach its targets. Some values may be missing; signal may still be available."
             IssueCode.NETWORK_CHANGED in codes -> "The network changed during the test. Saved with some values missing."
             result.status == MeasurementStatus.BLOCKED -> "The test couldn't run. The reading was saved and marked as failed."
             result.status == MeasurementStatus.PARTIAL -> "Some tests didn't finish. Saved with some values missing."

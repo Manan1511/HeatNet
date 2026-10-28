@@ -11,7 +11,22 @@ import org.junit.Test
 
 class PacketLossProbeTest {
     @Test
-    fun fallbackRequiresReachableHttp() = runBlocking {
+    fun slowIcmpLeavesTimeForHttpFallback() = runBlocking {
+        val slow = object : PingProcess {
+            override fun run(route: IcmpRoute, count: Int, intervalMillis: Int, timeoutMillis: Long): PingExecution {
+                Thread.sleep(1_500)
+                return PingExecution("", null, false)
+            }
+        }
+        val started = System.nanoTime()
+        val result = PacketLossProbe(IcmpProbe(slow)).measureWithFallback(
+            MeasurementConfig(), false, started + 500_000_000L,
+        ) { httpSuccess() }
+        assertEquals(PacketLossMethod.HTTP_PROBE_FAILURES, result.method)
+        assertTrue(System.nanoTime() - started < 1_000_000_000L)
+    }
+    @Test
+    fun fallbackCanEstablishHttpReachabilityItself() = runBlocking {
         val packetProbe = PacketLossProbe(icmpWithZeroReplies())
         var fallbackCalls = 0
 
@@ -24,9 +39,9 @@ class PacketLossProbeTest {
             httpSuccess()
         }
 
-        assertEquals(PacketLossMethod.UNAVAILABLE, result.method)
-        assertNull(result.lossPct)
-        assertEquals(0, fallbackCalls)
+        assertEquals(PacketLossMethod.HTTP_PROBE_FAILURES, result.method)
+        assertEquals(10f, result.lossPct!!, 0.001f)
+        assertEquals(1, fallbackCalls)
     }
 
     @Test
@@ -37,7 +52,7 @@ class PacketLossProbeTest {
             MeasurementConfig(),
             httpReachable = false,
             deadlineNanos = deadline(),
-        ) { httpSuccess() }
+        ) { PacketLossMeasurement(100f, PacketLossMethod.HTTP_PROBE_FAILURES, 5, 0) }
 
         assertEquals(PacketLossMethod.UNAVAILABLE, result.method)
         assertNull(result.lossPct)

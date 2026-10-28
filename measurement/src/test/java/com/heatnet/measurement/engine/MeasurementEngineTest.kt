@@ -266,7 +266,7 @@ class MeasurementEngineTest {
     }
 
     @Test
-    fun sharedTenSecondDeadlineStopsStartingLaterStagesAndKeepsCompletedDownload() = runBlocking {
+    fun slowDownloadDoesNotPreventLaterStages() = runBlocking {
         val harness = Harness(snapshot(fakeNetwork(), ConnectionType.WIFI, validated = true))
         harness.nowNanos = 1L
         harness.download = { _, budget, _ ->
@@ -276,14 +276,27 @@ class MeasurementEngineTest {
 
         val result = MeasurementEngine(harness.dependencies()).takeMeasurement(ConnectionType.WIFI)
 
-        assertEquals(MeasurementStatus.PARTIAL, result.status)
         assertEquals(42f, result.downloadMbps!!, 0.001f)
-        assertNull(result.uploadMbps)
-        assertNull(result.latencyMs)
+        assertEquals(31f, result.uploadMbps!!, 0.001f)
+        assertEquals(12f, result.latencyMs!!, 0.001f)
+        assertEquals(1, harness.uploadCalls.get())
+        assertEquals(1, harness.latencyCalls.get())
+        assertEquals(1, harness.lossCalls.get())
+    }
+
+    @Test
+    fun stalledDownloadTimesOutAndStillRunsOtherProbes() = runBlocking {
+        val harness = Harness(
+            snapshot(fakeNetwork(), ConnectionType.MOBILE, validated = true),
+            config = MeasurementConfig(overallTimeoutMillis = 50),
+            download = { _, _, _ -> awaitCancellation() },
+        )
+        val result = MeasurementEngine(harness.dependencies()).takeMeasurement(ConnectionType.MOBILE)
+        assertEquals(MeasurementStatus.PARTIAL, result.status)
         assertTrue(result.issues.any { it.code == IssueCode.TIMEOUT })
-        assertEquals(0, harness.uploadCalls.get())
-        assertEquals(0, harness.latencyCalls.get())
-        assertEquals(0, harness.lossCalls.get())
+        assertEquals(1, harness.uploadCalls.get())
+        assertEquals(1, harness.latencyCalls.get())
+        assertEquals(1, harness.lossCalls.get())
     }
 
     private fun snapshot(network: Network?, type: ConnectionType?, validated: Boolean) =

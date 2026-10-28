@@ -8,7 +8,7 @@
 
 ### Download and upload throughput
 
-The app sends two HTTP requests concurrently for each direction. It finishes the download phase before starting upload. Each direction has a shared maximum payload budget of 4 MiB, so one reading transfers no more than 8 MiB in total. The overall reading has a ten-second deadline.
+The app sends two HTTP requests concurrently for each direction. It finishes the download phase before starting upload. Each direction has a shared maximum payload budget of 4 MiB, so one reading transfers no more than 8 MiB in total. Each network probe has its own ten-second deadline, so a slow download does not prevent later probes.
 
 Throughput is calculated from bytes actually transferred and elapsed monotonic time:
 
@@ -28,7 +28,7 @@ HeatNet sends ten zero-byte HTTP GET requests to the configured latency endpoint
 
 ### Connection loss
 
-HeatNet requests up to twenty ICMP echo probes using Android’s `ping` executable, bound to the captured network’s interface and resolved through that network. The process has a short cap so HTTP fallback can still run within the overall deadline. If ICMP cannot run or receives no replies, the app may use HTTP fallback probes only when an earlier HTTP request succeeded.
+HeatNet requests up to twenty ICMP echo probes using Android’s `ping` executable, bound to the captured network’s interface and resolved through that network. The process has a short cap so HTTP fallback can run within the loss probe deadline. If ICMP cannot run or receives no replies, HTTP fallback probes can establish reachability themselves; without any evidence of HTTP reachability, loss remains unavailable.
 
 Both methods calculate a percentage from probes that actually started:
 
@@ -60,7 +60,7 @@ The library declares `INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, `A
 
 `PermissionGate` reports whether permission is ready; it does not display a system dialog. The Compose `NewSessionScreen` requests fine and coarse location together when the user continues with Wi-Fi. If precise permission is granted, it immediately continues to room setup. Mobile sessions do not request location. Internet/network-state permissions and `READ_BASIC_PHONE_STATE` are non-dangerous install-time permissions, so Android does not show runtime dialogs for them. `ConnectionMonitor` is shared app state, and the measurement engine does not stop it when a reading ends or is cancelled.
 
-The engine verifies the requested transport, captures radio data, runs each probe under one deadline, and returns `COMPLETE`, `PARTIAL`, or `BLOCKED`. If a route changes, unfinished work is cancelled and completed values are retained. Caller cancellation is propagated so HTTP calls, the ping process, radio callbacks, and flow collection can clean up.
+The engine verifies the requested transport, captures radio data, runs each probe under its own deadline, and returns `COMPLETE`, `PARTIAL`, or `BLOCKED`. If a route changes, unfinished work is cancelled and completed values are retained. Caller cancellation is propagated so HTTP calls, the ping process, radio callbacks, and flow collection can clean up.
 
 ## Passing data to the rest of HeatNet
 

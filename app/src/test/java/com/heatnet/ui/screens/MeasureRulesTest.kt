@@ -32,6 +32,7 @@ class MeasureRulesTest {
         val r = result(MeasurementStatus.BLOCKED, IssueCode.NO_INTERNET)
         assertTrue(MeasureRules.shouldSave(r))
         assertNotNull(MeasureRules.message(r, ConnectionType.WIFI))
+        assertTrue(MeasureRules.message(r, ConnectionType.WIFI)!!.contains("signal may still be available"))
     }
 
     @Test

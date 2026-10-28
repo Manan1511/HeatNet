@@ -50,6 +50,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation(libs.junit)
+    testImplementation("org.mockito:mockito-core:5.11.0")
 
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.room.runtime)

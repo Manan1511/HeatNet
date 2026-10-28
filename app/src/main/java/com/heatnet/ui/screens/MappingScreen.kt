@@ -50,6 +50,7 @@ import com.heatnet.data.model.Metric
 import com.heatnet.data.model.Reading
 import com.heatnet.measurement.model.ConnectionType
 import com.heatnet.measurement.model.MeasurementStatus
+import com.heatnet.measurement.model.PacketLossMethod
 import com.heatnet.ui.AppContainer
 import com.heatnet.ui.theme.AuroraBackground
 import com.heatnet.ui.theme.HeatNetTopBar
@@ -165,7 +166,7 @@ fun MappingScreen(container: AppContainer, sessionId: Long, onBack: () -> Unit, 
                             onClick = {},
                             label = {
                                 val more = config.minReadings - withValue
-                                Text("Take $more more reading${if (more == 1) "" else "s"} to see the heatmap")
+                                Text("Need $more more reading${if (more == 1) "" else "s"} with ${metric.label.lowercase()}")
                             },
                             modifier = Modifier.align(Alignment.TopCenter).padding(top = 4.dp),
                         )
@@ -196,7 +197,7 @@ fun MappingScreen(container: AppContainer, sessionId: Long, onBack: () -> Unit, 
                             if (vm.position == null) {
                                 "Walk to a spot, then tap where you are standing on the map."
                             } else {
-                                "Stay where you are and press Measure. It takes about 10 seconds."
+                                "Stay where you are and press Measure. Slow connections can take up to a minute."
                             },
                             style = MaterialTheme.typography.bodyMedium,
                         )
@@ -263,7 +264,11 @@ private fun ReadingDetailSheet(reading: Reading, isWifi: Boolean, onDismiss: () 
             DetailRow("Upload", reading.uploadMbps, "Mbps")
             DetailRow("Latency", reading.latencyMs, "ms")
             DetailRow("Jitter", reading.jitterMs, "ms")
-            DetailRow("Packet loss", reading.packetLossPct, "%")
+            DetailRow(
+                if (reading.packetLossMethod == PacketLossMethod.HTTP_PROBE_FAILURES) "HTTP request failures" else "Packet loss",
+                reading.packetLossPct,
+                "%",
+            )
             DetailRow("Packet loss method", reading.packetLossMethod.label)
             DetailRow("Signal strength", reading.signalDbm?.toFloat(), "dBm")
             if (isWifi) {

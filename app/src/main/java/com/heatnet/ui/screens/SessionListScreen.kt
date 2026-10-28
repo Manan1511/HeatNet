@@ -57,8 +57,7 @@ import java.text.DateFormat
 import java.util.Date
 
 /**
- * Saved sessions (F6): open, rename, delete, and pick two sessions to compare (F7). Comparing
- * needs two sessions on the same connection type, so the second pick is limited to that type.
+ * Saved sessions (F6): open, rename, delete, and pick two sessions to compare (F7).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -108,7 +107,7 @@ fun SessionListScreen(
                         enabled = ids != null,
                     )
                     Text(
-                        "Only sessions on the same connection type (Wi-Fi or mobile data) can be compared.",
+                        "Choose any two sessions. Wi-Fi and mobile signal strengths use different scales.",
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 8.dp),
                     )

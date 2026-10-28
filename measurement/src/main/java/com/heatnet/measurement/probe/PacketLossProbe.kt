@@ -6,6 +6,7 @@ import com.heatnet.measurement.model.IssueCode
 import com.heatnet.measurement.model.MeasurementConfig
 import com.heatnet.measurement.model.MeasurementIssue
 import com.heatnet.measurement.model.PacketLossMethod
+import kotlinx.coroutines.withTimeoutOrNull
 
 data class PacketLossMeasurement(
     val lossPct: Float?,
@@ -61,18 +62,17 @@ class PacketLossProbe internal constructor(
         icmp: suspend () -> PacketLossMeasurement,
         fallback: suspend () -> PacketLossMeasurement,
     ): PacketLossMeasurement {
-        val icmp = icmp()
-        if (icmp.method == PacketLossMethod.ICMP && icmp.successfulProbes > 0) return icmp
-
-        if (!httpReachable) {
-            return PacketLossMeasurement(
+        val remainingMillis = ((deadlineNanos - System.nanoTime()) / 1_000_000L).coerceAtLeast(1L)
+        val icmpBudgetMillis = minOf(5_000L, (remainingMillis / 2L).coerceAtLeast(1L))
+        val icmp = withTimeoutOrNull(icmpBudgetMillis) { icmp() }
+            ?: PacketLossMeasurement(
                 lossPct = null,
                 method = PacketLossMethod.UNAVAILABLE,
-                attemptedProbes = icmp.attemptedProbes,
-                successfulProbes = icmp.successfulProbes,
-                issues = icmp.issues + MeasurementIssue(IssueCode.NO_INTERNET, "HTTP fallback requires an earlier successful HTTP probe"),
+                attemptedProbes = 0,
+                successfulProbes = 0,
+                issues = listOf(MeasurementIssue(IssueCode.ICMP_UNAVAILABLE, "ICMP timed out; trying HTTP fallback")),
             )
-        }
+        if (icmp.method == PacketLossMethod.ICMP && icmp.successfulProbes > 0) return icmp
 
         val http = fallback()
         val issues = buildList {
@@ -81,8 +81,11 @@ class PacketLossProbe internal constructor(
                 add(MeasurementIssue(IssueCode.ICMP_UNAVAILABLE, "ICMP received no replies; HTTP request failures were used as fallback"))
             }
             addAll(http.issues)
+            if (!httpReachable && http.successfulProbes == 0) {
+                add(MeasurementIssue(IssueCode.NO_INTERNET, "No HTTP probe succeeded"))
+            }
         }
-        return if (http.method == PacketLossMethod.HTTP_PROBE_FAILURES) {
+        return if (http.method == PacketLossMethod.HTTP_PROBE_FAILURES && (httpReachable || http.successfulProbes > 0)) {
             http.copy(issues = issues.distinctBy { it.code })
         } else {
             PacketLossMeasurement(

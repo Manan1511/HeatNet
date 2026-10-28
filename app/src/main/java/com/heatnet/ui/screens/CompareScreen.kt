@@ -67,7 +67,7 @@ private sealed interface CompareLoad {
 }
 
 /**
- * F7: two saved sessions of the same connection type, side by side. Both maps use one colour scale
+ * F7: two saved sessions side by side. Shared metrics use one colour scale
  * built from both sessions' readings, so the same colour means the same value on each side.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -123,7 +123,7 @@ private fun Message(text: String) {
 @Composable
 private fun CompareContent(comparison: Comparison) {
     val type = comparison.before.session.connectionType
-    val metrics = Metric.availableFor(type)
+    val metrics = comparison.metrics.map { it.metric }
     var metricName by rememberSaveable { mutableStateOf(metrics.first().name) }
     val metric = metrics.firstOrNull { it.name == metricName } ?: metrics.first()
     val allReadings = comparison.before.readings + comparison.after.readings
@@ -134,6 +134,9 @@ private fun CompareContent(comparison: Comparison) {
         Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        if (comparison.before.session.connectionType != comparison.after.session.connectionType) {
+            Text("Wi-Fi and mobile signal strengths use different scales and are shown separately below.")
+        }
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             metrics.forEach { m ->
                 FilterChip(
@@ -173,6 +176,14 @@ private fun CompareContent(comparison: Comparison) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onTertiaryContainer,
                 )
+            }
+        }
+        if (comparison.before.session.connectionType != comparison.after.session.connectionType) {
+            Text("Signal strength by connection", style = MaterialTheme.typography.titleMedium)
+            listOf(comparison.before, comparison.after).forEach { session ->
+                val signalScale = MetricScale.forReadings(Metric.SIGNAL, session.session.connectionType, session.readings)
+                SessionMap(session.session.connectionType.name, session, Metric.SIGNAL, signalScale, Modifier.fillMaxWidth())
+                HeatmapLegend(signalScale, "Signal strength")
             }
         }
     }

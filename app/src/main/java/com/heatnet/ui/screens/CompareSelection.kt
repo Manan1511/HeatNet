@@ -3,15 +3,14 @@ package com.heatnet.ui.screens
 import com.heatnet.data.model.SessionSummary
 
 /**
- * Rules for picking two sessions to compare (PRD F7): exactly two, and both on the same connection
- * type. The first pick fixes the type; sessions of the other type cannot be added.
+ * Rules for picking exactly two distinct sessions, including sessions of different connection types.
  */
 object CompareSelection {
     const val REQUIRED = 2
 
     fun canSelect(selected: List<SessionSummary>, candidate: SessionSummary): Boolean {
         if (selected.any { it.id == candidate.id }) return true
-        return selected.size < REQUIRED && selected.all { it.connectionType == candidate.connectionType }
+        return selected.size < REQUIRED
     }
 
     /** Tapping an already-selected session deselects it; otherwise it is added when allowed. */

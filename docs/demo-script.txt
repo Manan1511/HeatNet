@@ -19,7 +19,7 @@
 
 1. Tap **Start a new map**.
 2. Point out the detected connection.
-   > "The app detects Wi-Fi or mobile data and locks the session to it, because the two can't be compared."
+   > "The app detects Wi-Fi or mobile data and locks each session to that connection. Shared internet metrics can be compared across connection types."
 3. If you selected Wi-Fi and permission is missing, tap **Allow precise location**. Android shows its permission dialog; approving it continues to room setup.
    > "Android requires this permission to expose Wi-Fi radio details. HeatNet uses the details for this reading and does not use them to determine where I am in the room."
 4. If you selected mobile data, tap **Continue with Mobile data**; the app does not request Wi-Fi location permission.
@@ -34,7 +34,7 @@
 
 1. Tap a spot on the map, then press **Measure**.
 2. While it runs, say:
-   > "It captures the current network, reads the Wi-Fi signal, then runs download, upload, latency and packet-loss tests in about 10 seconds."
+   > "It captures the current network, reads the Wi-Fi signal, then runs download, upload, latency and packet-loss tests. On a slow connection this can take about a minute."
 3. A dot appears. Repeat at **at least 3 spots**, ideally 5 or 6, in different parts of the room, one near the router and one far away.
    > "With fewer than 3 readings, no heatmap is drawn."
 
@@ -56,14 +56,14 @@
 
 ### 7. Compare (45 seconds)
 
-If you have two sessions of the same connection type:
+If you have two sessions:
 
 1. Go to **Saved sessions** and tap **Compare**.
 2. Pick two sessions. The button says how many more to pick.
 3. Show the side-by-side maps and the verdicts.
    > "It only compares areas both sessions measured, and it warns if the comparison might be unfair, for example different rooms or legacy simulated data from an older app version."
 
-If you only have one session, say: "With two sessions of the same type, this screen compares before and after." Do not fake it.
+If you only have one session, say: "With two sessions, this screen compares shared network measurements." Do not fake it.
 
 ### 8. Close (15 seconds)
 

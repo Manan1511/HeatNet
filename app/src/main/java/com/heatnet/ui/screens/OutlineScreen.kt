@@ -3,6 +3,7 @@ package com.heatnet.ui.screens
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -84,7 +85,7 @@ fun OutlineScreen(
                     if (vm.closed) {
                         "Tap the wall you can measure, then type its real length."
                     } else {
-                        "Tap each corner of the room in order. Tap the first corner again (or press Close shape) to finish."
+                        "Tap corners in order. Drag a corner to move it. Tap the first corner or press Close shape to finish."
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -93,6 +94,10 @@ fun OutlineScreen(
 
                 OutlineCanvas(vm, closeRadius, Modifier.fillMaxWidth().weight(1f))
 
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Snap corners to grid", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                    Switch(checked = vm.snapToGrid, onCheckedChange = { vm.snapToGrid = it })
+                }
                 if (!vm.closed) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         OutlinedButton(onClick = vm::undo, enabled = vm.corners.isNotEmpty(), shape = CircleShape) { Text("Undo") }
@@ -148,6 +153,7 @@ fun OutlineScreen(
 @Composable
 private fun OutlineCanvas(vm: OutlineViewModel, closeRadius: Float, modifier: Modifier) {
     val colors = MaterialTheme.colorScheme
+    val gridStepPx = with(LocalDensity.current) { 24.dp.toPx() }
     Canvas(
         modifier
             .padding(vertical = 4.dp)
@@ -155,13 +161,29 @@ private fun OutlineCanvas(vm: OutlineViewModel, closeRadius: Float, modifier: Mo
             .border(1.dp, colors.outlineVariant, RoundedCornerShape(28.dp))
             .pointerInput(vm) {
                 detectTapGestures {
-                    vm.onCanvasTap(Point(it.x, it.y), size.width.toFloat(), size.height.toFloat(), closeRadius)
+                    vm.onCanvasTap(Point(it.x, it.y), size.width.toFloat(), size.height.toFloat(), closeRadius, gridStepPx)
                 }
+            }
+            .pointerInput(vm, gridStepPx) {
+                var dragged: Int? = null
+                detectDragGestures(
+                    onDragStart = { position ->
+                        dragged = vm.cornerAt(Point(position.x, position.y), size.width.toFloat(), size.height.toFloat(), closeRadius)
+                    },
+                    onDragEnd = { dragged = null },
+                    onDragCancel = { dragged = null },
+                    onDrag = { change, _ ->
+                        dragged?.let { index ->
+                            vm.moveCorner(index, Point(change.position.x, change.position.y), size.width.toFloat(), size.height.toFloat(), gridStepPx)
+                            change.consume()
+                        }
+                    },
+                )
             },
     ) {
         val scale = vm.displayScale(size.width, size.height)
         drawRect(colors.surfaceContainerLow)
-        val gridStep = 24.dp.toPx()
+        val gridStep = gridStepPx
         var x = 0f
         while (x < size.width) {
             drawLine(colors.outlineVariant, Offset(x, 0f), Offset(x, size.height), 1f)

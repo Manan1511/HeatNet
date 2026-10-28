@@ -25,6 +25,6 @@ val MeasurementStage.label: String
 val PacketLossMethod.label: String
     get() = when (this) {
         PacketLossMethod.ICMP -> "Ping (ICMP)"
-        PacketLossMethod.HTTP_PROBE_FAILURES -> "HTTP request failures (ping was blocked)"
+        PacketLossMethod.HTTP_PROBE_FAILURES -> "HTTP request failures (ICMP unavailable)"
         PacketLossMethod.UNAVAILABLE -> "Not available"
     }

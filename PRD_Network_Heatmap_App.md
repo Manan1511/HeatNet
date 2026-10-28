@@ -10,7 +10,7 @@ Deadline: Not provided
 
 - The app targets Android 16 / API 36, with minimum SDK 36. The team selected Cloudflare's configurable public speed-test endpoints as the initial HTTP targets.
 - The AGP built-in Kotlin migration builds successfully with Gradle 9.8.0 and AGP 9.4.1.
-- Current working-tree verification (2026-10-28): 164 JVM tests and 9 API 36 emulator instrumentation tests passed with no failures or skips; the debug APK builds, and lint reports zero errors, 20 warnings, and one hint.
+- Current working-tree verification (2026-10-28): 169 JVM tests and 9 API 36 emulator instrumentation tests passed before the final ICMP fallback timeout adjustment, with no failures or skips; the debug APK builds, and lint reports zero errors, 22 warnings, and one hint.
 - An emulator walkthrough reached the connection picker, room-outline drawing, and room-scale setup. The home screen also resized in landscape. This does not verify real network measurements or radio values.
 - Still to do: run the app on the team's physical Android 16 phones and test in at least three real rooms; record which readings are unavailable and tune heatmap/weak-spot thresholds from those results. The report draft is `docs/heatnet-project-report-draft.md` and deliberately has no invented field data.
 - The team deadline and prior Android experience were not supplied and remain unknown.
@@ -21,7 +21,7 @@ Deadline: Not provided
 
 Paste this whole file at the start of a session, then say what you are working on (for example "I'm Member 2, help me build the heatmap renderer"). The AI should treat sections 3 to 9 as decisions already made, not suggestions. If you want to change one, say so explicitly and update this file afterwards.
 
-**Quick summary for the AI:** A native Kotlin Android app. The user outlines a room, walks around, taps their position on the outline, and the app runs a short network test (speed, latency, ICMP echo loss or labeled HTTP request-failure rate) plus reads available radio data. Each real reading becomes a dot. The app fills the gaps with inverse distance weighting and draws a heatmap that fades out far from any real reading. Sessions are saved locally and two sessions of the same connection type can be compared side by side. The app flags weak spots automatically. The shipped app has no simulated-reading mode.
+**Quick summary for the AI:** A native Kotlin Android app. The user outlines a room, walks around, taps their position on the outline, and the app runs a short network test (speed, latency, ICMP echo loss or labeled HTTP request-failure rate) plus reads available radio data. Each real reading becomes a dot. The app fills the gaps with inverse distance weighting and draws a heatmap that fades out far from any real reading. Sessions are saved locally and Wi-Fi and mobile sessions can be compared side by side for shared network metrics. The app flags weak spots automatically. The shipped app has no simulated-reading mode.
 
 ---
 
@@ -64,7 +64,7 @@ People know their Wi-Fi or mobile data is bad in some parts of a room but not wh
 |----|---------|-------|
 | F1 | Room outline | User draws the room by tapping corners to form a polygon, then enters the length of one wall in metres to set the scale |
 | F2 | Connection type detection | App detects Wi-Fi or mobile data at session start and locks the session to it |
-| F3 | Take a reading | User taps their position on the outline, presses Measure, a 5 to 10 second test runs, a dot appears |
+| F3 | Take a reading | User taps their position on the outline, presses Measure, a bounded network test runs, a dot appears |
 | F4 | Heatmap | Gaps filled with inverse distance weighting, colour fades with distance from the nearest real reading |
 | F5 | Metric switcher | Toggle the heatmap between metrics (see section 6) |
 | F6 | Save sessions | Store sessions locally on the phone |
@@ -72,7 +72,7 @@ People know their Wi-Fi or mobile data is bad in some parts of a room but not wh
 ### 4.2 Should have (build in this order)
 | ID | Feature | Notes |
 |----|---------|-------|
-| F7 | Compare two sessions | Side-by-side maps, same connection type only. **Highest priority after the core** |
+| F7 | Compare two sessions | Side-by-side maps for shared metrics, including Wi-Fi versus mobile; signal is shown separately for different types. **Highest priority after the core** |
 | F8 | Weak-spot flags | Marks areas below thresholds and writes one plain sentence per problem area. **First thing to drop if time runs out** |
 
 ### 4.3 Could have (only if everything above is done and tested)
@@ -87,10 +87,10 @@ People know their Wi-Fi or mobile data is bad in some parts of a room but not wh
 2. App detects connection type (Wi-Fi or mobile data) and shows it. Session is locked to that type. Continuing with Wi-Fi requests precise location permission for Wi-Fi radio details; approval proceeds to room setup. Mobile sessions do not request this permission.
 3. User draws the room outline by tapping corners, closes the shape, enters one wall length.
 4. User walks to a spot, taps that spot on the outline, presses **Measure**.
-5. App runs the test (5 to 10 seconds), places a coloured dot, updates the heatmap.
+5. App runs the test (slow connections can take about a minute), places a coloured dot, updates the heatmap.
 6. Repeat for roughly 10 to 15 spots.
 7. User taps **Finish**. Session is saved. Weak-spot summary is shown (F8).
-8. Later: user opens two saved sessions of the same type and taps **Compare**.
+8. Later: user opens two saved sessions and taps **Compare**.
 
 **Edge cases to handle:**
 - Connection type changes mid-session: show a warning ("You've switched to mobile data. Readings from here won't match earlier ones.") and let the user end the session or return to the original connection.
@@ -111,9 +111,9 @@ Every reading is one **Reading** record (data model in section 8).
 | Upload speed (Mbps) | Upload up to 4 MiB total to the configured public HTTPS endpoint using two parallel HTTP streams |
 | Latency (ms) | Time up to 10 zero-byte HTTPS requests and record the average of successful requests |
 | Jitter (ms) | Sample standard deviation of successful latency request timings |
-| Packet loss (%) | Try up to 20 ICMP echo probes and count missing replies. If ICMP cannot run or gets no replies, use up to 20 HTTP probes only if an earlier HTTP request succeeded; label the result as an application-level HTTP request-failure rate, not packet loss |
+| Packet loss (%) | Try up to 20 ICMP echo probes and count missing replies. If ICMP cannot run or gets no replies, try up to 20 HTTP probes, reporting the fallback only when HTTP reachability is established; label the result as an application-level HTTP request-failure rate, not packet loss |
 
-One reading has a shared ten-second deadline. Two streams per direction can use more of a fast link than one stream, but the result is still public-endpoint internet goodput, not Wi-Fi capacity.
+Each network probe has its own ten-second deadline. Two streams per direction can use more of a fast link than one stream, but the result is still public-endpoint internet goodput, not Wi-Fi capacity.
 Known limitation: a public server means results depend on the internet beyond the user's Wi-Fi. Use the same server every time and keep tests short.
 
 ### 6.2 Wi-Fi sessions: radio data
@@ -298,7 +298,7 @@ Fill in real dates once the deadline is known. Phases are in order, not necessar
 The project is done when:
 1. A user can map a room of normal size in under 10 minutes.
 2. A session shows a heatmap for every metric in section 6.4.
-3. Two sessions of the same type can be compared side by side.
+3. Any two sessions can be compared side by side for shared metrics, with mixed radio signal scales shown separately.
 4. The app works on every phone the team owns.
 5. Every team member can explain, without notes, how each metric is measured and what IDW does and does not do.
 6. The report states the limitations honestly (public server dependence, IDW and walls, manual positioning).

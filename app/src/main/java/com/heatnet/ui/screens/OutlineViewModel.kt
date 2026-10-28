@@ -15,6 +15,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.round
 
 /**
  * F1: the user taps corners (in screen pixels) to draw the room, closes the shape, picks one
@@ -29,6 +30,7 @@ class OutlineViewModel(
     var closed by mutableStateOf(false)
         private set
     var snap by mutableStateOf(true)
+    var snapToGrid by mutableStateOf(false)
     var message by mutableStateOf<String?>(null)
         private set
     var selectedWall by mutableStateOf(0)
@@ -47,13 +49,44 @@ class OutlineViewModel(
         OutlineCanvasTransform.scale(drawnWidth, drawnHeight, canvasWidth, canvasHeight)
 
     /** A tap in current canvas pixels, mapped back to the stored corner coordinate space. */
-    fun onCanvasTap(p: Point, canvasWidth: Float, canvasHeight: Float, closeRadiusPx: Float) {
+    fun onCanvasTap(p: Point, canvasWidth: Float, canvasHeight: Float, closeRadiusPx: Float, gridStep: Float = 0f) {
         if (corners.isEmpty() && !closed) {
             drawnWidth = canvasWidth
             drawnHeight = canvasHeight
         }
         val scale = displayScale(canvasWidth, canvasHeight)
-        onTap(OutlineCanvasTransform.toStored(p, scale), closeRadiusPx / scale)
+        onTap(OutlineCanvasTransform.toStored(if (closed) p else gridPoint(p, gridStep), scale), closeRadiusPx / scale)
+    }
+
+    private fun gridPoint(p: Point, step: Float): Point =
+        if (snapToGrid && step > 0f) Point(round(p.x / step) * step, round(p.y / step) * step) else p
+
+    fun cornerAt(p: Point, canvasWidth: Float, canvasHeight: Float, radius: Float): Int? {
+        val scale = displayScale(canvasWidth, canvasHeight)
+        return corners.indices.minByOrNull { Geometry.distance(OutlineCanvasTransform.toCanvas(corners[it], scale), p) }
+            ?.takeIf { Geometry.distance(OutlineCanvasTransform.toCanvas(corners[it], scale), p) <= radius }
+    }
+
+    fun moveCorner(index: Int, p: Point, canvasWidth: Float, canvasHeight: Float, gridStep: Float) {
+        if (index !in corners.indices) return
+        val bounded = Point(p.x.coerceIn(0f, canvasWidth), p.y.coerceIn(0f, canvasHeight))
+        val snapped = gridPoint(bounded, gridStep)
+        val point = OutlineCanvasTransform.toStored(
+            Point(snapped.x.coerceIn(0f, canvasWidth), snapped.y.coerceIn(0f, canvasHeight)),
+            displayScale(canvasWidth, canvasHeight),
+        )
+        val candidate = corners.toMutableList().also { it[index] = point }
+        if (candidate.zipWithNext().any { (a, b) -> Geometry.distance(a, b) < 1f }) return
+        if (closed) {
+            if (Geometry.distance(candidate.first(), candidate.last()) < 1f ||
+                !Geometry.isSimple(candidate) || Geometry.area(candidate) < 100f) return
+        } else {
+            for (i in 2 until candidate.size) {
+                if (Geometry.newEdgeCrosses(candidate.take(i), candidate[i])) return
+            }
+        }
+        corners[index] = point
+        message = null
     }
 
     private fun onTap(p: Point, closeRadiusPx: Float) {
@@ -65,7 +98,7 @@ class OutlineViewModel(
             close()
             return
         }
-        val q = if (snap && corners.isNotEmpty()) snapped(p, closeRadiusPx) else p
+        val q = if (snap && !snapToGrid && corners.isNotEmpty()) snapped(p, closeRadiusPx) else p
         if (corners.isNotEmpty() && Geometry.distance(q, corners.last()) < closeRadiusPx / 2f) return
         if (Geometry.newEdgeCrosses(corners, q)) {
             message = "Walls can't cross each other. Tap somewhere else."

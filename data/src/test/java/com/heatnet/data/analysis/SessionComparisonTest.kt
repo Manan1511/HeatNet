@@ -18,11 +18,14 @@ class SessionComparisonTest {
     private fun metric(c: Comparison, m: Metric) = c.metrics.single { it.metric == m }
 
     @Test
-    fun `different connection types are refused`() {
+    fun `different connection types compare shared metrics`() {
         val wifi = sessionOf(room(id = 1), reading(1f, 1f))
         val mobile = sessionOf(room(id = 2, type = ConnectionType.MOBILE), reading(1f, 1f, sessionId = 2))
         val result = SessionComparison.compare(wifi, mobile)
-        assertEquals(CompareError.DIFFERENT_CONNECTION_TYPE, (result as ComparisonResult.Failure).error)
+        val metrics = (result as ComparisonResult.Success).comparison.metrics.map { it.metric }
+        assertTrue(Metric.DOWNLOAD in metrics)
+        assertFalse(Metric.SIGNAL in metrics)
+        assertFalse(Metric.LINK_SPEED in metrics)
     }
 
     @Test

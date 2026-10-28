@@ -28,7 +28,7 @@ The mapping layer adds room coordinates and session identifiers after the measur
 
 ### Throughput
 
-HeatNet measures application payload delivered by HTTPS requests to configurable Cloudflare speed-test endpoints. It uses two parallel streams per direction and caps the payload at 4 MiB for download and 4 MiB for upload. One reading has a ten-second overall deadline.
+HeatNet measures application payload delivered by HTTPS requests to configurable Cloudflare speed-test endpoints. It uses two parallel streams per direction and caps the payload at 4 MiB for download and 4 MiB for upload. Each probe has its own ten-second deadline, allowing later probes to run after a slow download.
 
 The reported throughput is calculated as:
 
@@ -46,7 +46,7 @@ These are application request timings, so they include transport and server resp
 
 ### Packet loss and fallback
 
-HeatNet attempts up to twenty ICMP echo probes to `speed.cloudflare.com`. When ICMP is unavailable or receives no replies, the app can use HTTP request probes if an earlier HTTP request succeeded. The result includes a method label:
+HeatNet attempts up to twenty ICMP echo probes to `speed.cloudflare.com`. When ICMP is unavailable or receives no replies, the app can use HTTP request probes when HTTP reachability is established by an earlier request or by the fallback itself. The result includes a method label:
 
 - **ICMP** reports echo-probe loss.
 - **HTTP_PROBE_FAILURES** reports the fraction of attempted HTTP requests that failed. This is an application-level failure rate, not a claim that the same percentage of IP packets was dropped.
@@ -72,7 +72,7 @@ The project targets Android 16 (API 36), uses Java/Kotlin bytecode target 17, an
 
 The debug app was installed and opened on a Pixel 7 API 36 emulator. The visible UI smoke check covered the home screen, connection selection, room outline drawing, and room-scale entry. The home screen was also observed in landscape after allowing Android 16 to resize the activity. Emulator results verify app wiring and navigation only; they do not verify physical Wi-Fi or cellular measurements.
 
-The current working-tree run passed **164 JVM tests and 9 API 36 emulator instrumentation tests** (173 total; zero failures, errors, or skips), built the debug APK, and completed lint with **zero errors, 20 warnings, and one hint** across the three modules. Warnings include API/dependency suggestions and Compose/resource recommendations. The project intentionally remains on the requested API 36 target. Gradle also reports an AGP project-import performance hint and deprecated features that will need review before Gradle 10.
+The current working-tree run passed **169 JVM tests and 9 API 36 emulator instrumentation tests** (178 total; zero failures, errors, or skips; emulator tests ran before the final ICMP fallback timeout adjustment), built the debug APK, and completed lint with **zero errors, 22 warnings, and one hint** across the three modules. Warnings include API/dependency suggestions and Compose/resource recommendations. The project intentionally remains on the requested API 36 target. Gradle also reports an AGP project-import performance hint and deprecated features that will need review before Gradle 10.
 
 ## 6. Field-test results (pending)
 

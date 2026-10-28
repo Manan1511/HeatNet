@@ -22,16 +22,16 @@ class CompareSelectionTest {
     private val mobile = session(4, ConnectionType.MOBILE)
 
     @Test
-    fun firstPickFixesTheConnectionType() {
+    fun firstPickAllowsEitherConnectionType() {
         val selected = CompareSelection.toggle(emptyList(), wifiA)
         assertTrue(CompareSelection.canSelect(selected, wifiB))
-        assertFalse(CompareSelection.canSelect(selected, mobile))
+        assertTrue(CompareSelection.canSelect(selected, mobile))
     }
 
     @Test
-    fun differentTypeIsIgnored() {
+    fun differentTypeCanBeSelected() {
         val selected = CompareSelection.toggle(listOf(wifiA), mobile)
-        assertEquals(listOf(wifiA), selected)
+        assertEquals(listOf(wifiA, mobile), selected)
     }
 
     @Test
