@@ -1,6 +1,11 @@
 package com.heatnet.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,10 +41,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.heatnet.data.model.SessionSummary
 import com.heatnet.ui.AppContainer
+import com.heatnet.measurement.model.ConnectionType
+import com.heatnet.ui.theme.Brand
+import com.heatnet.ui.theme.StatusPill
 import com.heatnet.ui.theme.HeatNetTopBar
 import com.heatnet.ui.theme.PrimaryButton
 import kotlinx.coroutines.launch
@@ -113,31 +123,24 @@ fun SessionListScreen(
             }
             return@Scaffold
         }
-        LazyColumn(Modifier.fillMaxSize().padding(padding)) {
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             items(list.orEmpty(), key = { it.id }) { s ->
                 val isSelected = selected.any { it.id == s.id }
                 val enabled = !comparing || CompareSelection.canSelect(selected, s)
-                ListItem(
-                    colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
-                    headlineContent = { Text(s.name) },
-                    supportingContent = {
-                        Text("${s.connectionType.label} · ${s.readingCount} readings · ${dateFormat.format(Date(s.createdAt))}")
-                    },
-                    leadingContent = if (comparing) {
-                        { Checkbox(checked = isSelected, onCheckedChange = null, enabled = enabled) }
-                    } else {
-                        null
-                    },
-                    trailingContent = if (comparing) {
-                        null
-                    } else {
-                        { SessionMenu(onRename = { renaming = s }, onDelete = { deleting = s }) }
-                    },
-                    modifier = Modifier.clickable(enabled = enabled) {
-                        if (comparing) selected = CompareSelection.toggle(selected, s) else onOpen(s.id)
-                    },
+                SessionCard(
+                    summary = s,
+                    dateText = dateFormat.format(Date(s.createdAt)),
+                    comparing = comparing,
+                    isSelected = isSelected,
+                    enabled = enabled,
+                    onClick = { if (comparing) selected = CompareSelection.toggle(selected, s) else onOpen(s.id) },
+                    onRename = { renaming = s },
+                    onDelete = { deleting = s },
                 )
-                HorizontalDivider()
             }
         }
     }
@@ -167,6 +170,56 @@ fun SessionListScreen(
             },
             dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel") } },
         )
+    }
+}
+
+@Composable
+private fun SessionCard(
+    summary: SessionSummary,
+    dateText: String,
+    comparing: Boolean,
+    isSelected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    onRename: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val shape = MaterialTheme.shapes.medium
+    val borderColor = if (isSelected) scheme.primary else scheme.outlineVariant
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .alpha(if (enabled) 1f else 0.45f)
+            .clip(shape)
+            .background(if (isSelected) scheme.primaryContainer.copy(alpha = 0.45f) else scheme.surfaceContainer)
+            .border(if (isSelected) 1.5.dp else 1.dp, borderColor, shape)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        if (comparing) {
+            Checkbox(checked = isSelected, onCheckedChange = null, enabled = enabled)
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(summary.name, style = MaterialTheme.typography.titleMedium)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatusPill(
+                    text = summary.connectionType.label,
+                    dotColor = if (summary.connectionType == ConnectionType.WIFI) Brand.Cyan else Brand.Pink,
+                )
+                Text(
+                    "${summary.readingCount} readings",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant,
+                )
+            }
+            Text(dateText, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+        }
+        if (!comparing) {
+            SessionMenu(onRename = onRename, onDelete = onDelete)
+        }
     }
 }
 

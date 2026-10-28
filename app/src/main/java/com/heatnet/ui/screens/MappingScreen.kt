@@ -1,5 +1,7 @@
 package com.heatnet.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -18,9 +22,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -35,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -45,6 +52,7 @@ import com.heatnet.measurement.model.MeasurementStatus
 import com.heatnet.ui.AppContainer
 import com.heatnet.ui.theme.HeatNetTopBar
 import com.heatnet.ui.theme.PrimaryButton
+import com.heatnet.ui.theme.StatusPill
 import com.heatnet.ui.heatmap.HeatmapConfig
 import com.heatnet.ui.heatmap.HeatmapLegend
 import com.heatnet.ui.heatmap.HeatmapView
@@ -112,11 +120,29 @@ fun MappingScreen(container: AppContainer, sessionId: Long, onBack: () -> Unit, 
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 metrics.forEach { m ->
-                    FilterChip(selected = m == metric, onClick = { vm.selectMetric(m) }, label = { Text(m.label) })
+                    FilterChip(
+                        selected = m == metric,
+                        onClick = { vm.selectMetric(m) },
+                        label = { Text(m.label) },
+                        shape = CircleShape,
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                            selectedLabelColor = MaterialTheme.colorScheme.primary,
+                        ),
+                    )
                 }
             }
 
-            Box(Modifier.fillMaxWidth().weight(1f)) {
+            val mapShape = RoundedCornerShape(28.dp)
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .clip(mapShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, mapShape),
+            ) {
                 HeatmapView(
                     outline = session.outline,
                     widthMetres = session.widthMetres,
@@ -143,17 +169,25 @@ fun MappingScreen(container: AppContainer, sessionId: Long, onBack: () -> Unit, 
                 }
             }
 
-            Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
                 vm.message?.let {
                     Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary)
                 }
                 val stage = vm.stage
                 if (stage != null) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        CircularProgressIndicator(Modifier.padding(4.dp))
+                        StatusPill("Measuring", pulsing = true)
                         Text("${stage.label}…", Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
                         OutlinedButton(onClick = vm::cancelMeasure) { Text("Cancel") }
                     }
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth().clip(CircleShape))
                 } else {
                     Text(
                         if (vm.position == null) {

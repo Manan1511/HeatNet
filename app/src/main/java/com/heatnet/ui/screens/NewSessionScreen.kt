@@ -39,7 +39,9 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.heatnet.measurement.model.ConnectionType
 import com.heatnet.ui.AppContainer
+import com.heatnet.ui.theme.AuroraBackground
 import com.heatnet.ui.theme.HeatNetTopBar
+import com.heatnet.ui.theme.StatusPill
 import com.heatnet.ui.theme.PrimaryButton
 import com.heatnet.ui.theme.SurfaceCard
 
@@ -74,86 +76,88 @@ fun NewSessionScreen(container: AppContainer, onBack: () -> Unit, onContinue: (C
     val snapshot by container.connectionMonitor.state.collectAsStateWithLifecycle()
     val detected: ConnectionType? = if (fake) demoType else snapshot.connectionType
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            HeatNetTopBar(
-                title = { Text("New session") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-                },
-            )
-        },
-    ) { padding ->
-        Column(
-            Modifier.fillMaxSize().padding(padding).padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            if (fake) {
-                Text("Demo mode: pick a connection type to pretend to use.", style = MaterialTheme.typography.bodyLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ConnectionType.entries.forEach { type ->
-                        FilterChip(selected = demoType == type, onClick = { demoType = type }, label = { Text(type.label) })
-                    }
-                }
-            } else {
-                SurfaceCard(Modifier.fillMaxWidth(), container = MaterialTheme.colorScheme.primaryContainer) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Your connection", style = MaterialTheme.typography.labelLarge)
-                        Text(
-                            when {
-                                detected != null -> detected.label
-                                !snapshot.hasTransportObservation -> "Checking…"
-                                snapshot.network == null -> "Not connected"
-                                else -> "Not supported (use Wi-Fi or mobile data)"
-                            },
-                            style = MaterialTheme.typography.headlineSmall,
-                        )
-                    }
-                }
-                Text(
-                    "The whole session stays on this connection. Wi-Fi and mobile data readings are never mixed in one map.",
-                    style = MaterialTheme.typography.bodyMedium,
+    AuroraBackground {
+        Scaffold(
+            containerColor = androidx.compose.ui.graphics.Color.Transparent,
+            topBar = {
+                HeatNetTopBar(
+                    title = { Text("New session") },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                    },
                 )
-            }
-
-            val needsLocation = !fake && detected == ConnectionType.WIFI && !hasLocation
-            if (needsLocation) {
-                SurfaceCard(Modifier.fillMaxWidth(), container = MaterialTheme.colorScheme.tertiaryContainer) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Location permission needed", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "Android only shares Wi-Fi details (signal strength, channel, access point) with apps " +
-                                "that have location permission. HeatNet does not use your location.",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        if (onlyApproximate) {
+            },
+        ) { padding ->
+            Column(
+                Modifier.fillMaxSize().padding(padding).padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                if (fake) {
+                    Text("Demo mode: pick a connection type to pretend to use.", style = MaterialTheme.typography.bodyLarge)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ConnectionType.entries.forEach { type ->
+                            FilterChip(selected = demoType == type, onClick = { demoType = type }, label = { Text(type.label) })
+                        }
+                    }
+                } else {
+                    SurfaceCard(Modifier.fillMaxWidth(), container = MaterialTheme.colorScheme.primaryContainer) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            StatusPill("Your connection", pulsing = true)
                             Text(
-                                "You allowed only approximate location. Wi-Fi details need precise location: " +
-                                    "tap Allow location again and choose Precise.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.error,
+                                when {
+                                    detected != null -> detected.label
+                                    !snapshot.hasTransportObservation -> "Checking…"
+                                    snapshot.network == null -> "Not connected"
+                                    else -> "Not supported (use Wi-Fi or mobile data)"
+                                },
+                                style = MaterialTheme.typography.headlineSmall,
                             )
                         }
-                        Button(onClick = { launcher.launch(WifiLocationPermissionPolicy.requestPermissions) }) {
-                            Text("Allow location")
-                        }
-                        if (askedOnce) {
-                            OutlinedButton(onClick = {
-                                context.startActivity(
-                                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)),
+                    }
+                    Text(
+                        "The whole session stays on this connection. Wi-Fi and mobile data readings are never mixed in one map.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+
+                val needsLocation = !fake && detected == ConnectionType.WIFI && !hasLocation
+                if (needsLocation) {
+                    SurfaceCard(Modifier.fillMaxWidth(), container = MaterialTheme.colorScheme.tertiaryContainer) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Location permission needed", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Android only shares Wi-Fi details (signal strength, channel, access point) with apps " +
+                                    "that have location permission. HeatNet does not use your location.",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            if (onlyApproximate) {
+                                Text(
+                                    "You allowed only approximate location. Wi-Fi details need precise location: " +
+                                        "tap Allow location again and choose Precise.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error,
                                 )
-                            }) { Text("Open app settings") }
+                            }
+                            Button(onClick = { launcher.launch(WifiLocationPermissionPolicy.requestPermissions) }) {
+                                Text("Allow location")
+                            }
+                            if (askedOnce) {
+                                OutlinedButton(onClick = {
+                                    context.startActivity(
+                                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)),
+                                    )
+                                }) { Text("Open app settings") }
+                            }
                         }
                     }
                 }
-            }
 
-            PrimaryButton(
-                text = if (detected != null) "Continue on ${detected.label}" else "Continue",
-                onClick = { detected?.let(onContinue) },
-                enabled = detected != null && !needsLocation,
-            )
+                PrimaryButton(
+                    text = if (detected != null) "Continue on ${detected.label}" else "Continue",
+                    onClick = { detected?.let(onContinue) },
+                    enabled = detected != null && !needsLocation,
+                )
+            }
         }
     }
 }
