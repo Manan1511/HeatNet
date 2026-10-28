@@ -8,6 +8,8 @@
 
 **Tech Stack:** Kotlin 2.3.21, Android Gradle Plugin 8.13.2, Gradle 8.13, JDK 17, Android API 36, coroutines 1.11.0, OkHttp 5.4.0, JUnit 4, AndroidX Test.
 
+> **Status reviewed 2026-10-28:** The measurement engine, host app, and tests described here are implemented. The original Task 1 toolchain details above are historical; the current build uses AGP 9.4.1 with built-in Kotlin and Gradle 9.8.0. Automated verification passes with 165 JVM tests and 9 API 36 instrumentation tests. Physical-device radio validation and the PRD's three-room field testing remain outstanding.
+
 **Spec:** `docs/superpowers/specs/2026-10-06-heatnet-member-1-measurement-design.md`
 
 ## Global Constraints
@@ -93,7 +95,7 @@ Use `Float?` for throughput, latency, jitter, and loss fields to match the share
 - [x] **Step 2: Run** `.\gradlew.bat :measurement:testDebugUnitTest` and confirm classifier/monitor tests fail.
 - [x] **Step 3: Implement** a pure classifier and `ConnectivityManager.registerDefaultNetworkCallback` adapter. Construct the callback with `FLAG_INCLUDE_LOCATION_INFO`, publish the default network and `NET_CAPABILITY_VALIDATED` via `StateFlow`, and ignore stale callbacks from replaced networks.
 - [x] **Step 4: Run** `.\gradlew.bat :measurement:testDebugUnitTest :measurement:connectedDebugAndroidTest`; confirm classification and callback lifecycle tests pass on the API 36 AVD.
-- [ ] **Step 5: Commit** as `feat(measurement): monitor active network state`.
+- [x] **Step 5: Commit** as `feat(measurement): monitor active network state` (`defed85`).
 
 ### Task 4: Read Wi-Fi and cellular radio data with the approved permissions
 
@@ -105,7 +107,7 @@ Use `Float?` for throughput, latency, jitter, and loss fields to match the share
 - [x] **Step 2: Run** `.\gradlew.bat :measurement:testDebugUnitTest` and confirm these tests fail.
 - [x] **Step 3: Implement** permission checks without launching dialogs. Read Wi-Fi transport info from the captured `Network`; turn Android sentinels/redaction into null. Read cellular signal from the active data subscription's `TelephonyManager`, pair dBm only with the active technology, read data type with `READ_BASIC_PHONE_STATE`, and use a short-lived `TelephonyCallback.DisplayInfoListener` to read the NR NSA override when base type is LTE. Bound the callback wait and unregister it in `finally`; return null on absent telephony feature or unavailable modem data.
 - [x] **Step 4: Add API 36 instrumentation checks** for merged permissions and platform adapters, then run `.gradlew.bat :measurement:testDebugUnitTest :measurement:connectedDebugAndroidTest`.
-- [ ] **Step 5: Commit** as `feat(measurement): capture wifi and cellular radio data`.
+- [x] **Step 5: Commit** as `feat(measurement): capture wifi and cellular radio data` (`a2a37fb`).
 
 ### Task 5: Implement captured-network latency and throughput probes
 
@@ -117,7 +119,7 @@ Use `Float?` for throughput, latency, jitter, and loss fields to match the share
 - [x] **Step 2: Run** `.\gradlew.bat :measurement:testDebugUnitTest` and confirm the probe tests fail.
 - [x] **Step 3: Implement** an OkHttp client using `Network.getSocketFactory()` and network-specific `Network.getAllByName()` DNS; adapt calls to cancellable suspend operations. Stream and count payload bytes, cap each direction at 4 MiB across both streams, issue exactly ten latency requests, and calculate Mbps from payload bytes and monotonic elapsed time. Keep configured Cloudflare URLs replaceable.
 - [x] **Step 4: Run** `.\gradlew.bat :measurement:testDebugUnitTest :measurement:connectedDebugAndroidTest` and confirm byte, latency, error, route-binding, and cancellation tests pass.
-- [ ] **Step 5: Commit** as `feat(measurement): measure bounded latency and throughput`.
+- [x] **Step 5: Commit** as `feat(measurement): measure bounded latency and throughput` (`c489c21`).
 
 ### Task 6: Implement ICMP parsing and the labeled HTTP loss fallback
 
@@ -129,7 +131,7 @@ Use `Float?` for throughput, latency, jitter, and loss fields to match the share
 - [x] **Step 2: Run** `.\gradlew.bat :measurement:testDebugUnitTest` and confirm the parser/probe tests fail.
 - [x] **Step 3: Implement** `ping` process execution for twenty echoes to the configured Cloudflare host, parse transmitted/received counts, and stop the process on cancellation/deadline. If ICMP cannot run or receives no replies and an earlier HTTP probe succeeded, make up to twenty small HTTP probes; otherwise return unavailable loss rather than calling total offline failure packet loss.
 - [x] **Step 4: Run** `.\gradlew.bat :measurement:testDebugUnitTest :measurement:connectedDebugAndroidTest` and confirm ICMP, fallback, offline, and cleanup tests pass.
-- [ ] **Step 5: Commit** as `feat(measurement): report ICMP and HTTP probe loss`.
+- [x] **Step 5: Commit** as `feat(measurement): report ICMP and HTTP probe loss` (`261395b`).
 
 ### Task 7: Orchestrate one reading and preserve partial results
 
@@ -137,21 +139,22 @@ Use `Float?` for throughput, latency, jitter, and loss fields to match the share
 
 **Interfaces:** `suspend fun MeasurementEngine.takeMeasurement(expectedType: ConnectionType, onProgress: (MeasurementProgress) -> Unit = {}): MeasurementResult`. The engine consumes the monitor, gate, radio readers, probes, config, wall clock, and monotonic clock from earlier tasks.
 
-- [ ] **Step 1: Write failing tests** including `MeasurementEngineTest.networkLossReturnsPartialAndCallerCancellationCleansUp`. Cover successful result/progress order `VERIFYING_NETWORK → CAPTURING_RADIO → DOWNLOAD → UPLOAD → LATENCY → PACKET_LOSS → COMPLETE`; unsupported or mismatched type returning `BLOCKED` without probes; Wi-Fi denial returning `BLOCKED`; unvalidated/offline internet retaining radio data and null network metrics; single probe failure preserving other metrics; network loss canceling children and returning `PARTIAL`; ten-second deadline; and caller cancellation propagating while cleaning up HTTP calls, ping process, telephony callback, and flow collection without stopping the shared `ConnectionMonitor`.
-- [ ] **Step 2: Run** `.\gradlew.bat :measurement:testDebugUnitTest` and confirm orchestration tests fail.
-- [ ] **Step 3: Implement** snapshot capture, expected-type validation, permission/radio reads, and probe stages under one monotonic ten-second deadline. Use the captured network for every probe and the immutable config supplied to the engine. If the captured network is lost or replaced by a new default network, cancel unfinished probes and record a partial result; propagate caller cancellation. Return `BLOCKED` for unsupported or mismatched transport, a missing captured network, or denied Wi-Fi location permission; return `COMPLETE` only when all planned probes finish with no issues; otherwise return `PARTIAL`, retaining every completed metric. An unvalidated internet state is informational and must not block probes.
-- [ ] **Step 4: Run** `.\gradlew.bat :measurement:testDebugUnitTest` and confirm all orchestration and review-focus tests pass.
-- [ ] **Step 5: Commit** as `feat(measurement): orchestrate bounded readings`.
+- [x] **Step 1: Write tests** including `MeasurementEngineTest.networkLossReturnsPartialAndCallerCancellationCleansUp`. Coverage includes progress order, blocked transports and permission, partial results, deadline handling, and cleanup on network loss or cancellation.
+- [x] **Step 2: Run** `:measurement:testDebugUnitTest`; all measurement-engine unit tests pass.
+- [x] **Step 3: Implement** snapshot capture, expected-type validation, permission/radio reads, and probe stages under one monotonic ten-second deadline. The engine uses the captured network for every probe and the immutable config supplied to it. If the captured network is lost or replaced by a new default network, unfinished probes are cancelled and the result is partial; caller cancellation propagates. Unsupported or mismatched transport, a missing captured network, or denied Wi-Fi location permission returns `BLOCKED`; probe issues return `PARTIAL` while retaining completed metrics. An unvalidated internet state does not block probes.
+- [x] **Step 4: Run** `:measurement:testDebugUnitTest`; orchestration and review-focus tests pass.
+- [x] **Step 5: Commit** as `feat(measurement): orchestrate bounded readings` (`a71b5a7`).
 
 ### Task 8: Verify app consumption and write the viva guide
 
 **Files:** Create `app/src/androidTest/java/com/heatnet/MeasurementManifestIntegrationTest.kt` and `docs/member-1-viva.md`; adjust only the new host/library test configuration as required.
 
-- [ ] **Step 1: Write the integration test** `libraryManifestDeclaresMeasurementPermissions` to verify the consuming app sees the merged network, Wi-Fi, location, and basic phone-state permissions, and `appConsumesMeasurementLibrary` to compile against `MeasurementEngine`/`MeasurementResult` with `packetLossMethod = HTTP_PROBE_FAILURES` and `wifiBand = "6"`.
-- [ ] **Step 2: Run** `.\gradlew.bat :app:connectedDebugAndroidTest`; expect the tests to pass because Tasks 1, 2, and 7 already wired the consuming app and public API. If they fail, fix manifest merging or public API visibility before proceeding.
-- [ ] **Step 3: Write** the viva guide covering throughput and parallel streams, HTTP latency and jitter, ICMP versus HTTP failure percentage, RSSI, Wi-Fi PHY rate versus internet throughput, bands/channels, mobile types, permissions, public-edge variability, the `MeasurementResult` to future `Reading` mapping, and the limits of emulator/physical readings.
-- [ ] **Step 4: Run final checks** with `.\gradlew.bat :app:assembleDebug :measurement:testDebugUnitTest :app:connectedDebugAndroidTest`. Start the API 36 AVD first. On a physical Android 16 phone, manually record one Wi-Fi and one mobile reading; note unavailable radio fields instead of treating emulator values as real.
-- [ ] **Step 5: Review** `git diff --check`, confirm the PRD is untouched and unstaged, and commit as `docs: add member one measurement viva guide`.
+- [x] **Step 1: Write the integration tests** for merged measurement permissions and app consumption of `MeasurementEngine`/`MeasurementResult`, including the HTTP-loss method and 6 GHz band.
+- [x] **Step 2: Run** `:app:connectedDebugAndroidTest` on the API 36 emulator; integration tests pass.
+- [x] **Step 3: Write** the viva guide covering throughput and parallel streams, HTTP latency and jitter, ICMP versus HTTP failure percentage, RSSI, Wi-Fi PHY rate versus internet throughput, bands/channels, mobile types, permissions, public-edge variability, the `MeasurementResult` to future `Reading` mapping, and the limits of emulator/physical readings (`docs/member-1-viva.md`).
+- [x] **Step 4: Run final automated checks** with `test assembleDebug connectedDebugAndroidTest lintDebug` on the API 36 emulator. Result: 165 JVM tests and 9 instrumentation tests pass; build succeeds and lint reports zero errors.
+- [ ] **Manual field validation remains:** use physical Android 16 phones to record Wi-Fi and mobile readings, then test at least three different rooms. Record unavailable fields and whether ICMP or HTTP fallback was used; emulator results are not substitutes for radio measurements.
+- [x] **Step 5: Review and commit** the viva guide (`7952eb3`). The PRD has since been updated with verified project status and remaining field work.
 
 ## Toolchain References
 
