@@ -207,7 +207,7 @@ private fun SessionCard(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StatusPill(
                     text = summary.connectionType.label,
-                    dotColor = if (summary.connectionType == ConnectionType.WIFI) Brand.Cyan else Brand.Pink,
+                    dotColor = if (summary.connectionType == ConnectionType.WIFI) Brand.Sky else Brand.Indigo,
                 )
                 Text(
                     "${summary.readingCount} readings",

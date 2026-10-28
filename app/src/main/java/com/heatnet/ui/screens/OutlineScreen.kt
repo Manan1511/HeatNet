@@ -1,6 +1,7 @@
 package com.heatnet.ui.screens
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -9,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -27,8 +30,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
@@ -41,7 +45,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.heatnet.data.model.Point
 import com.heatnet.measurement.model.ConnectionType
 import com.heatnet.ui.AppContainer
+import com.heatnet.ui.theme.AuroraBackground
 import com.heatnet.ui.theme.HeatNetTopBar
+import com.heatnet.ui.theme.PrimaryButton
+import com.heatnet.ui.theme.StatusPill
 import com.heatnet.ui.geometry.Geometry
 import com.heatnet.ui.heatmap.formatValue
 
@@ -56,78 +63,82 @@ fun OutlineScreen(
     val vm = viewModel { OutlineViewModel(container.repository, connectionType) }
     val closeRadius = with(LocalDensity.current) { 28.dp.toPx() }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            HeatNetTopBar(
-                title = { Text(if (vm.closed) "Set the scale" else "Draw the room") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-                },
-            )
-        },
-    ) { padding ->
-        Column(
-            Modifier.fillMaxSize().padding(padding).imePadding().padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                if (vm.closed) {
-                    "Tap the wall you can measure, then type its real length."
-                } else {
-                    "Tap each corner of the room in order. Tap the first corner again (or press Close shape) to finish."
-                },
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            vm.message?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
-
-            OutlineCanvas(vm, closeRadius, Modifier.fillMaxWidth().weight(1f))
-
-            if (!vm.closed) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedButton(onClick = vm::undo, enabled = vm.corners.isNotEmpty()) { Text("Undo") }
-                    OutlinedButton(onClick = vm::clear, enabled = vm.corners.isNotEmpty()) { Text("Clear") }
-                    Button(onClick = vm::close, enabled = vm.corners.size >= 3) { Text("Close shape") }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Straighten walls", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                    Switch(checked = vm.snap, onCheckedChange = { vm.snap = it })
-                }
-            } else {
-                val scaled = vm.scaledOutline()
-                OutlinedTextField(
-                    value = vm.wallLengthText,
-                    onValueChange = { vm.wallLengthText = it },
-                    label = { Text("Length of the highlighted wall (m)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    singleLine = true,
-                    isError = vm.wallLengthText.isNotBlank() && scaled.isFailure,
-                    supportingText = {
-                        val text = scaled.fold(
-                            onSuccess = {
-                                val b = Geometry.bounds(it)
-                                "Room is about ${formatValue(b.width)} × ${formatValue(b.height)} m"
-                            },
-                            onFailure = { e -> if (vm.wallLengthText.isBlank()) "" else e.message.orEmpty() },
-                        )
-                        Text(text)
+    AuroraBackground {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                HeatNetTopBar(
+                    title = { Text(if (vm.closed) "Set the scale" else "Draw the room") },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
                     },
-                    modifier = Modifier.fillMaxWidth(),
                 )
-                OutlinedTextField(
-                    value = vm.name,
-                    onValueChange = { vm.name = it },
-                    label = { Text("Session name") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+            },
+        ) { padding ->
+            Column(
+                Modifier.fillMaxSize().padding(padding).imePadding().padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                StatusPill(if (vm.closed) "Step 2 of 2" else "Step 1 of 2", pulsing = !vm.closed)
+                Text(
+                    if (vm.closed) {
+                        "Tap the wall you can measure, then type its real length."
+                    } else {
+                        "Tap each corner of the room in order. Tap the first corner again (or press Close shape) to finish."
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = vm::undo) { Text("Edit outline") }
-                    Button(
+                vm.message?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
+
+                OutlineCanvas(vm, closeRadius, Modifier.fillMaxWidth().weight(1f))
+
+                if (!vm.closed) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedButton(onClick = vm::undo, enabled = vm.corners.isNotEmpty(), shape = CircleShape) { Text("Undo") }
+                        OutlinedButton(onClick = vm::clear, enabled = vm.corners.isNotEmpty(), shape = CircleShape) { Text("Clear") }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Straighten walls", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                        Switch(checked = vm.snap, onCheckedChange = { vm.snap = it })
+                    }
+                    PrimaryButton("Close shape", vm::close, enabled = vm.corners.size >= 3)
+                } else {
+                    val scaled = vm.scaledOutline()
+                    OutlinedTextField(
+                        value = vm.wallLengthText,
+                        onValueChange = { vm.wallLengthText = it },
+                        label = { Text("Length of the highlighted wall (m)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        isError = vm.wallLengthText.isNotBlank() && scaled.isFailure,
+                        supportingText = {
+                            val text = scaled.fold(
+                                onSuccess = {
+                                    val b = Geometry.bounds(it)
+                                    "Room is about ${formatValue(b.width)} × ${formatValue(b.height)} m"
+                                },
+                                onFailure = { e -> if (vm.wallLengthText.isBlank()) "" else e.message.orEmpty() },
+                            )
+                            Text(text)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = vm.name,
+                        onValueChange = { vm.name = it },
+                        label = { Text("Session name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    PrimaryButton(
+                        text = "Start mapping",
                         onClick = { vm.create(onSessionCreated) },
                         enabled = scaled.isSuccess && !vm.creating,
-                        modifier = Modifier.weight(1f),
-                    ) { Text("Start mapping") }
+                    )
+                    TextButton(onClick = vm::undo, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                        Text("Edit outline")
+                    }
                 }
             }
         }
@@ -140,7 +151,8 @@ private fun OutlineCanvas(vm: OutlineViewModel, closeRadius: Float, modifier: Mo
     Canvas(
         modifier
             .padding(vertical = 4.dp)
-            .clipToBounds()
+            .clip(RoundedCornerShape(28.dp))
+            .border(1.dp, colors.outlineVariant, RoundedCornerShape(28.dp))
             .pointerInput(vm) {
                 detectTapGestures {
                     vm.onCanvasTap(Point(it.x, it.y), size.width.toFloat(), size.height.toFloat(), closeRadius)

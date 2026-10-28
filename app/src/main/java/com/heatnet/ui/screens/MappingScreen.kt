@@ -42,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -50,6 +51,7 @@ import com.heatnet.data.model.Reading
 import com.heatnet.measurement.model.ConnectionType
 import com.heatnet.measurement.model.MeasurementStatus
 import com.heatnet.ui.AppContainer
+import com.heatnet.ui.theme.AuroraBackground
 import com.heatnet.ui.theme.HeatNetTopBar
 import com.heatnet.ui.theme.PrimaryButton
 import com.heatnet.ui.theme.StatusPill
@@ -71,165 +73,167 @@ fun MappingScreen(container: AppContainer, sessionId: Long, onBack: () -> Unit, 
     val session = vm.session
     val readings by vm.readings.collectAsStateWithLifecycle()
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            HeatNetTopBar(
-                title = {
-                    Column {
-                        Text(session?.name ?: "Map", style = MaterialTheme.typography.titleMedium)
-                        session?.let {
-                            val demoLabel = when {
-                                readings.isEmpty() -> ""
-                                readings.all { reading -> reading.isDemo } -> " · demo"
-                                readings.any { reading -> reading.isDemo } -> " · includes demo"
-                                else -> ""
+    AuroraBackground {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                HeatNetTopBar(
+                    title = {
+                        Column {
+                            Text(session?.name ?: "Map", style = MaterialTheme.typography.titleMedium)
+                            session?.let {
+                                val demoLabel = when {
+                                    readings.isEmpty() -> ""
+                                    readings.all { reading -> reading.isDemo } -> " · demo"
+                                    readings.any { reading -> reading.isDemo } -> " · includes demo"
+                                    else -> ""
+                                }
+                                Text(
+                                    "${it.connectionType.label} · ${readings.size} readings$demoLabel",
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
                             }
-                            Text(
-                                "${it.connectionType.label} · ${readings.size} readings$demoLabel",
-                                style = MaterialTheme.typography.bodySmall,
-                            )
                         }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-                },
-                actions = {
-                    TextButton(onClick = onFinish, enabled = session != null && !vm.measuring) { Text("Finish") }
-                },
-            )
-        },
-    ) { padding ->
-        if (session == null) {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                if (vm.notFound) Text("This session no longer exists.") else CircularProgressIndicator()
-            }
-            return@Scaffold
-        }
-
-        val metrics = Metric.availableFor(session.connectionType)
-        val metric = vm.metric.takeIf { it in metrics } ?: metrics.first()
-        val scale = MetricScale.forReadings(metric, session.connectionType, readings)
-        val config = HeatmapConfig()
-        val withValue = readings.count { metric.valueOf(it) != null }
-
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            Row(
-                Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                metrics.forEach { m ->
-                    FilterChip(
-                        selected = m == metric,
-                        onClick = { vm.selectMetric(m) },
-                        label = { Text(m.label) },
-                        shape = CircleShape,
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                            selectedLabelColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                }
-            }
-
-            val mapShape = RoundedCornerShape(28.dp)
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                    .clip(mapShape)
-                    .background(MaterialTheme.colorScheme.surfaceContainer)
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, mapShape),
-            ) {
-                HeatmapView(
-                    outline = session.outline,
-                    widthMetres = session.widthMetres,
-                    heightMetres = session.heightMetres,
-                    readings = readings,
-                    metric = metric,
-                    scale = scale,
-                    config = config,
-                    selectedPosition = vm.position,
-                    highlightedReadingId = vm.selectedReadingId,
-                    onTap = vm::onMapTap,
-                    onReadingTap = { if (!vm.measuring) vm.selectedReadingId = it.id },
-                    modifier = Modifier.fillMaxSize(),
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                    },
+                    actions = {
+                        TextButton(onClick = onFinish, enabled = session != null && !vm.measuring) { Text("Finish") }
+                    },
                 )
-                if (withValue < config.minReadings) {
-                    AssistChip(
-                        onClick = {},
-                        label = {
-                            val more = config.minReadings - withValue
-                            Text("Take $more more reading${if (more == 1) "" else "s"} to see the heatmap")
-                        },
-                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 4.dp),
-                    )
+            },
+        ) { padding ->
+            if (session == null) {
+                Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                    if (vm.notFound) Text("This session no longer exists.") else CircularProgressIndicator()
                 }
+                return@Scaffold
             }
 
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                vm.message?.let {
-                    Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary)
-                }
-                val stage = vm.stage
-                if (stage != null) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        StatusPill("Measuring", pulsing = true)
-                        Text("${stage.label}…", Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                        OutlinedButton(onClick = vm::cancelMeasure) { Text("Cancel") }
+            val metrics = Metric.availableFor(session.connectionType)
+            val metric = vm.metric.takeIf { it in metrics } ?: metrics.first()
+            val scale = MetricScale.forReadings(metric, session.connectionType, readings)
+            val config = HeatmapConfig()
+            val withValue = readings.count { metric.valueOf(it) != null }
+
+            Column(Modifier.fillMaxSize().padding(padding)) {
+                Row(
+                    Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    metrics.forEach { m ->
+                        FilterChip(
+                            selected = m == metric,
+                            onClick = { vm.selectMetric(m) },
+                            label = { Text(m.label) },
+                            shape = CircleShape,
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                selectedLabelColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
                     }
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth().clip(CircleShape))
-                } else {
-                    Text(
-                        if (vm.position == null) {
-                            "Walk to a spot, then tap where you are standing on the map."
-                        } else {
-                            "Stay where you are and press Measure. It takes about 10 seconds."
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    PrimaryButton("Measure", vm::measure, enabled = vm.position != null)
                 }
-                HeatmapLegend(scale, metric.displayLabel(readings))
-            }
-        }
 
-        readings.firstOrNull { it.id == vm.selectedReadingId }?.let { reading ->
-            ReadingDetailSheet(
-                reading = reading,
-                isWifi = session.connectionType == ConnectionType.WIFI,
-                onDismiss = { vm.selectedReadingId = null },
-                onDelete = { vm.deleteReading(reading.id) },
-            )
-        }
-
-        vm.switchedTo?.let { now ->
-            AlertDialog(
-                onDismissRequest = vm::dismissSwitchWarning,
-                title = { Text("Connection changed") },
-                text = {
-                    Text(
-                        "You've switched to ${now.label.lowercase()}. Readings from here won't match earlier ones. " +
-                            "Switch back to ${session.connectionType.label.lowercase()} to keep mapping, or end the session.",
+                val mapShape = RoundedCornerShape(28.dp)
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .clip(mapShape)
+                        .background(MaterialTheme.colorScheme.surfaceContainer)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, mapShape),
+                ) {
+                    HeatmapView(
+                        outline = session.outline,
+                        widthMetres = session.widthMetres,
+                        heightMetres = session.heightMetres,
+                        readings = readings,
+                        metric = metric,
+                        scale = scale,
+                        config = config,
+                        selectedPosition = vm.position,
+                        highlightedReadingId = vm.selectedReadingId,
+                        onTap = vm::onMapTap,
+                        onReadingTap = { if (!vm.measuring) vm.selectedReadingId = it.id },
+                        modifier = Modifier.fillMaxSize(),
                     )
-                },
-                confirmButton = { TextButton(onClick = vm::dismissSwitchWarning) { Text("I'll switch back") } },
-                dismissButton = {
-                    TextButton(onClick = {
-                        vm.dismissSwitchWarning()
-                        onFinish()
-                    }) { Text("End session") }
-                },
-            )
+                    if (withValue < config.minReadings) {
+                        AssistChip(
+                            onClick = {},
+                            label = {
+                                val more = config.minReadings - withValue
+                                Text("Take $more more reading${if (more == 1) "" else "s"} to see the heatmap")
+                            },
+                            modifier = Modifier.align(Alignment.TopCenter).padding(top = 4.dp),
+                        )
+                    }
+                }
+
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    vm.message?.let {
+                        Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary)
+                    }
+                    val stage = vm.stage
+                    if (stage != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            StatusPill("Measuring", pulsing = true)
+                            Text("${stage.label}…", Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                            OutlinedButton(onClick = vm::cancelMeasure) { Text("Cancel") }
+                        }
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth().clip(CircleShape))
+                    } else {
+                        Text(
+                            if (vm.position == null) {
+                                "Walk to a spot, then tap where you are standing on the map."
+                            } else {
+                                "Stay where you are and press Measure. It takes about 10 seconds."
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        PrimaryButton("Measure", vm::measure, enabled = vm.position != null)
+                    }
+                    HeatmapLegend(scale, metric.displayLabel(readings))
+                }
+            }
+
+            readings.firstOrNull { it.id == vm.selectedReadingId }?.let { reading ->
+                ReadingDetailSheet(
+                    reading = reading,
+                    isWifi = session.connectionType == ConnectionType.WIFI,
+                    onDismiss = { vm.selectedReadingId = null },
+                    onDelete = { vm.deleteReading(reading.id) },
+                )
+            }
+
+            vm.switchedTo?.let { now ->
+                AlertDialog(
+                    onDismissRequest = vm::dismissSwitchWarning,
+                    title = { Text("Connection changed") },
+                    text = {
+                        Text(
+                            "You've switched to ${now.label.lowercase()}. Readings from here won't match earlier ones. " +
+                                "Switch back to ${session.connectionType.label.lowercase()} to keep mapping, or end the session.",
+                        )
+                    },
+                    confirmButton = { TextButton(onClick = vm::dismissSwitchWarning) { Text("I'll switch back") } },
+                    dismissButton = {
+                        TextButton(onClick = {
+                            vm.dismissSwitchWarning()
+                            onFinish()
+                        }) { Text("End session") }
+                    },
+                )
+            }
         }
     }
 }

@@ -40,10 +40,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.luminance
@@ -91,7 +93,7 @@ fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifi
 
 @Composable
 fun SecondaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
-    val border = Brush.linearGradient(listOf(Brand.Cyan.copy(alpha = 0.55f), Brand.Violet.copy(alpha = 0.55f)))
+    val border = Brush.linearGradient(listOf(Brand.Sky.copy(alpha = 0.6f), Brand.Blue.copy(alpha = 0.6f)))
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
@@ -162,9 +164,9 @@ fun AuroraBackground(modifier: Modifier = Modifier, content: @Composable BoxScop
                     center = Offset(cx, cy),
                 )
             }
-            glow(w * (0.12f + 0.25f * t), h * (0.08f + 0.05f * t), w * 0.95f, Brand.Violet)
-            glow(w * (0.95f - 0.25f * t), h * (0.34f + 0.10f * t), w * 0.8f, Brand.Cyan)
-            glow(w * (0.25f + 0.2f * t), h * (0.98f - 0.1f * t), w * 0.9f, Brand.Pink)
+            glow(w * (0.12f + 0.25f * t), h * (0.08f + 0.05f * t), w * 0.95f, Brand.Indigo)
+            glow(w * (0.95f - 0.25f * t), h * (0.34f + 0.10f * t), w * 0.8f, Brand.Sky)
+            glow(w * (0.25f + 0.2f * t), h * (0.98f - 0.1f * t), w * 0.9f, Brand.Blue)
         }
         content()
     }
@@ -226,7 +228,7 @@ fun HeatHero(modifier: Modifier = Modifier, height: androidx.compose.ui.unit.Dp 
             blob(w * (0.18f + shift), h * 0.70f, h * 0.75f, Color(0xFFF87171))
             blob(w * (0.42f - shift), h * 0.32f, h * 0.70f, Color(0xFFFCD34D))
             blob(w * (0.72f + shift), h * 0.66f, h * 0.80f, Color(0xFF34D399))
-            blob(w * (0.92f - shift), h * 0.24f, h * 0.55f, Color(0xFF22D3EE))
+            blob(w * (0.92f - shift), h * 0.24f, h * 0.55f, Brand.Sky)
 
             val points = listOf(0.18f to 0.70f, 0.42f to 0.32f, 0.72f to 0.66f, 0.92f to 0.24f)
             points.forEachIndexed { index, (px, py) ->
@@ -271,3 +273,52 @@ fun HeatNetTopBar(
     navigationIcon: @Composable () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
 ) = TopAppBar(title = title, navigationIcon = navigationIcon, actions = actions, colors = heatNetTopBarColors())
+
+/** Wi-Fi symbol: a dot with three arcs, drawn by hand because the core icon set has no Wi-Fi icon. */
+@Composable
+fun WifiGlyph(color: Color, modifier: Modifier = Modifier.size(32.dp)) {
+    Canvas(modifier) {
+        val w = size.width
+        val cx = w / 2f
+        val cy = size.height * 0.86f
+        val stroke = Stroke(width = w * 0.10f, cap = StrokeCap.Round)
+        listOf(0.22f, 0.42f, 0.62f).forEach { f ->
+            val r = w * f
+            drawArc(
+                color = color,
+                startAngle = -135f,
+                sweepAngle = 90f,
+                useCenter = false,
+                topLeft = Offset(cx - r, cy - r),
+                size = Size(2f * r, 2f * r),
+                style = stroke,
+            )
+        }
+        drawCircle(color, radius = w * 0.075f, center = Offset(cx, cy))
+    }
+}
+
+/** Mobile-signal symbol: four rising bars. */
+@Composable
+fun SignalBarsGlyph(color: Color, modifier: Modifier = Modifier.size(32.dp)) {
+    Canvas(modifier) {
+        val w = size.width
+        val h = size.height
+        val barWidth = w * 0.17f
+        val gap = (w - 4f * barWidth) / 3f
+        listOf(0.30f, 0.52f, 0.76f, 1.0f).forEachIndexed { i, fraction ->
+            val barHeight = h * fraction
+            drawRoundRect(
+                color = color,
+                topLeft = Offset(i * (barWidth + gap), h - barHeight),
+                size = Size(barWidth, barHeight),
+                cornerRadius = CornerRadius(barWidth * 0.35f),
+            )
+        }
+    }
+}
+
+/** Green used for "good / connected" states, dark enough to read on light backgrounds. */
+@Composable
+fun statusGreen(): Color =
+    if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFF34D399) else Color(0xFF047857)

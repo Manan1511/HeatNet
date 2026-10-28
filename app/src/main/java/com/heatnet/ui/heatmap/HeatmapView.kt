@@ -68,7 +68,7 @@ fun HeatmapView(
     val hitRadius = with(density) { 24.dp.toPx() }
     val colors = MaterialTheme.colorScheme
     val roomFill = colors.surfaceVariant
-    val outlineColor = colors.onSurface
+    val outlineColor = colors.onSurfaceVariant
     val selectionColor = colors.primary
 
     // Latest values for the gesture handler, which is set up once.
@@ -121,7 +121,7 @@ fun HeatmapView(
                 )
             }
         }
-        drawPath(path, outlineColor, style = Stroke(width = 3.dp.toPx()))
+        drawPath(path, outlineColor, style = Stroke(width = 2.5.dp.toPx()))
 
         readings.forEach { r ->
             val p = transform.toPx(Point(r.x, r.y)).toOffset()

@@ -2,12 +2,14 @@ package com.heatnet.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -18,74 +20,73 @@ import androidx.compose.ui.unit.sp
 
 /** Brand colours. The heatmap scale (red to green) is separate so the data colours stay unambiguous. */
 object Brand {
-    val Cyan = Color(0xFF22D3EE)
-    val Teal = Color(0xFF2DD4BF)
-    val Violet = Color(0xFF8B5CF6)
-    val Pink = Color(0xFFF472B6)
+    val Sky = Color(0xFF38BDF8)
+    val Blue = Color(0xFF3B82F6)
+    val Indigo = Color(0xFF6366F1)
     val Amber = Color(0xFFFBBF24)
 
     /** Signature gradient used on primary actions, the logo word and highlights. */
-    val gradient: Brush = Brush.linearGradient(listOf(Cyan, Violet))
+    val gradient: Brush = Brush.linearGradient(listOf(Sky, Blue))
 
-    /** Warmer variant for emphasis moments. */
-    val warmGradient: Brush = Brush.linearGradient(listOf(Violet, Pink))
+    /** Deeper variant for selected states and emphasis. */
+    val deepGradient: Brush = Brush.linearGradient(listOf(Blue, Indigo))
 }
 
 private val DarkColors = darkColorScheme(
-    primary = Brand.Teal,
-    onPrimary = Color(0xFF03211D),
-    primaryContainer = Color(0xFF0F3B37),
-    onPrimaryContainer = Color(0xFFB8F5EC),
-    secondary = Color(0xFFA78BFA),
-    onSecondary = Color(0xFF1E1048),
-    secondaryContainer = Color(0xFF2E2063),
-    onSecondaryContainer = Color(0xFFE4DBFF),
+    primary = Color(0xFF4DA3FF),
+    onPrimary = Color(0xFF021B3A),
+    primaryContainer = Color(0xFF0E2A55),
+    onPrimaryContainer = Color(0xFFCFE4FF),
+    secondary = Color(0xFF8AA4FF),
+    onSecondary = Color(0xFF0E1A4D),
+    secondaryContainer = Color(0xFF1B2A6B),
+    onSecondaryContainer = Color(0xFFDCE4FF),
     tertiary = Brand.Amber,
     onTertiary = Color(0xFF3A2A00),
     tertiaryContainer = Color(0xFF4A3600),
     onTertiaryContainer = Color(0xFFFFE9A8),
-    background = Color(0xFF070B14),
-    onBackground = Color(0xFFEAF0FF),
-    surface = Color(0xFF070B14),
-    onSurface = Color(0xFFEAF0FF),
-    surfaceVariant = Color(0xFF172036),
-    onSurfaceVariant = Color(0xFF93A1C0),
-    surfaceContainerLowest = Color(0xFF050810),
-    surfaceContainerLow = Color(0xFF0C1322),
-    surfaceContainer = Color(0xFF0F182B),
-    surfaceContainerHigh = Color(0xFF172238),
-    surfaceContainerHighest = Color(0xFF1E2B45),
-    outline = Color(0xFF5F6E8F),
-    outlineVariant = Color(0xFF26324D),
+    background = Color(0xFF040A1C),
+    onBackground = Color(0xFFE8F0FF),
+    surface = Color(0xFF040A1C),
+    onSurface = Color(0xFFE8F0FF),
+    surfaceVariant = Color(0xFF15264F),
+    onSurfaceVariant = Color(0xFF8FA3CC),
+    surfaceContainerLowest = Color(0xFF030715),
+    surfaceContainerLow = Color(0xFF081230),
+    surfaceContainer = Color(0xFF0C1838),
+    surfaceContainerHigh = Color(0xFF132246),
+    surfaceContainerHighest = Color(0xFF1A2E5A),
+    outline = Color(0xFF5870A0),
+    outlineVariant = Color(0xFF20325E),
     error = Color(0xFFFF8A80),
 )
 
 private val LightColors = lightColorScheme(
-    primary = Color(0xFF0E9F8E),
+    primary = Color(0xFF1D5FE0),
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFD1F7F1),
-    onPrimaryContainer = Color(0xFF053B35),
-    secondary = Color(0xFF7C3AED),
+    primaryContainer = Color(0xFFDCE8FF),
+    onPrimaryContainer = Color(0xFF06214F),
+    secondary = Color(0xFF4F5BD5),
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFEDE5FF),
-    onSecondaryContainer = Color(0xFF2B1066),
+    secondaryContainer = Color(0xFFE3E7FF),
+    onSecondaryContainer = Color(0xFF111B5E),
     tertiary = Color(0xFFB45309),
     onTertiary = Color.White,
     tertiaryContainer = Color(0xFFFEF0C7),
     onTertiaryContainer = Color(0xFF452A03),
-    background = Color(0xFFF3F6FC),
-    onBackground = Color(0xFF0B1220),
-    surface = Color(0xFFF3F6FC),
-    onSurface = Color(0xFF0B1220),
-    surfaceVariant = Color(0xFFE3E9F5),
-    onSurfaceVariant = Color(0xFF55627F),
+    background = Color(0xFFEEF4FF),
+    onBackground = Color(0xFF071330),
+    surface = Color(0xFFEEF4FF),
+    onSurface = Color(0xFF071330),
+    surfaceVariant = Color(0xFFDDE7FA),
+    onSurfaceVariant = Color(0xFF4D6086),
     surfaceContainerLowest = Color.White,
-    surfaceContainerLow = Color(0xFFFAFBFE),
+    surfaceContainerLow = Color(0xFFF7FAFF),
     surfaceContainer = Color.White,
-    surfaceContainerHigh = Color(0xFFEAEFF9),
-    surfaceContainerHighest = Color(0xFFDFE6F4),
-    outline = Color(0xFF8A96B2),
-    outlineVariant = Color(0xFFD8E0F0),
+    surfaceContainerHigh = Color(0xFFE6EEFC),
+    surfaceContainerHighest = Color(0xFFD9E4F8),
+    outline = Color(0xFF7D90B8),
+    outlineVariant = Color(0xFFD3E0FA),
     error = Color(0xFFB42318),
 )
 
@@ -117,10 +118,14 @@ private val AppShapes = Shapes(
 
 @Composable
 fun HeatNetTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+    val colors = if (darkTheme) DarkColors else LightColors
     MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
+        colorScheme = colors,
         typography = AppTypography,
         shapes = AppShapes,
-        content = content,
-    )
+    ) {
+        // Screens use transparent Scaffolds over the aurora background, which would otherwise leave
+        // default text black (unreadable in dark mode). Set the base text colour for the whole app.
+        CompositionLocalProvider(LocalContentColor provides colors.onBackground, content = content)
+    }
 }

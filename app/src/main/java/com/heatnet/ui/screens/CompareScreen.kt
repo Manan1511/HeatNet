@@ -1,5 +1,6 @@
 package com.heatnet.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -17,6 +20,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,15 +35,23 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.heatnet.data.analysis.Comparison
 import com.heatnet.data.analysis.ComparisonResult
 import com.heatnet.data.analysis.SessionComparison
+import com.heatnet.data.analysis.Verdict
 import com.heatnet.data.model.Metric
 import com.heatnet.data.model.SessionWithReadings
 import com.heatnet.ui.AppContainer
+import com.heatnet.ui.theme.AuroraBackground
+import com.heatnet.ui.theme.Brand
 import com.heatnet.ui.theme.HeatNetTopBar
+import com.heatnet.ui.theme.StatusPill
+import com.heatnet.ui.theme.SurfaceCard
+import com.heatnet.ui.theme.statusGreen
 import com.heatnet.ui.heatmap.HeatmapLegend
 import com.heatnet.ui.heatmap.HeatmapView
 import com.heatnet.ui.heatmap.MetricScale
@@ -75,24 +87,26 @@ fun CompareScreen(container: AppContainer, beforeId: Long, afterId: Long, onBack
         }
     }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            HeatNetTopBar(
-                title = { Text("Compare sessions") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-                },
-            )
-        },
-    ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding)) {
-            when (val state = load) {
-                CompareLoad.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-                CompareLoad.Missing -> Message("One of these sessions no longer exists.")
-                is CompareLoad.Done -> when (val result = state.result) {
-                    is ComparisonResult.Failure -> Message(result.error.message)
-                    is ComparisonResult.Success -> CompareContent(result.comparison)
+    AuroraBackground {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                HeatNetTopBar(
+                    title = { Text("Compare sessions") },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                    },
+                )
+            },
+        ) { padding ->
+            Box(Modifier.fillMaxSize().padding(padding)) {
+                when (val state = load) {
+                    CompareLoad.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+                    CompareLoad.Missing -> Message("One of these sessions no longer exists.")
+                    is CompareLoad.Done -> when (val result = state.result) {
+                        is ComparisonResult.Failure -> Message(result.error.message)
+                        is ComparisonResult.Success -> CompareContent(result.comparison)
+                    }
                 }
             }
         }
@@ -126,6 +140,11 @@ private fun CompareContent(comparison: Comparison) {
                     selected = m == metric,
                     onClick = { metricName = m.name },
                     label = { Text(m.label) },
+                    shape = CircleShape,
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                        selectedLabelColor = MaterialTheme.colorScheme.primary,
+                    ),
                 )
             }
         }
@@ -137,19 +156,24 @@ private fun CompareContent(comparison: Comparison) {
 
         HeatmapLegend(scale, metric.displayLabel(allReadings))
 
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(summary.verdict.label, style = MaterialTheme.typography.titleMedium)
-                Text(describe(summary), style = MaterialTheme.typography.bodyMedium)
-            }
+        val verdictColor = when (summary.verdict) {
+            Verdict.IMPROVED -> statusGreen()
+            Verdict.WORSE -> MaterialTheme.colorScheme.error
+            else -> MaterialTheme.colorScheme.primary
+        }
+        SurfaceCard(Modifier.fillMaxWidth()) {
+            StatusPill(summary.verdict.label, dotColor = verdictColor)
+            Text(describe(summary), style = MaterialTheme.typography.bodyMedium)
         }
 
         comparison.warnings.forEach { warning ->
-            Text(
-                "Note: $warning",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
+            SurfaceCard(Modifier.fillMaxWidth(), container = MaterialTheme.colorScheme.tertiaryContainer) {
+                Text(
+                    "Note: $warning",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                )
+            }
         }
     }
 }
@@ -164,8 +188,13 @@ private fun SessionMap(
 ) {
     val session = data.session
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(title, style = MaterialTheme.typography.labelLarge)
-        Text(session.name, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+        Text(title, style = MaterialTheme.typography.titleSmall.copy(brush = Brand.gradient))
+        Text(
+            session.name,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+        )
         HeatmapView(
             outline = session.outline,
             widthMetres = session.widthMetres,
@@ -175,6 +204,8 @@ private fun SessionMap(
             scale = scale,
             modifier = Modifier
                 .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainer)
                 .aspectRatio((session.widthMetres / session.heightMetres.coerceAtLeast(0.1f)).coerceIn(0.4f, 2.5f)),
         )
     }
