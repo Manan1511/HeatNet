@@ -11,26 +11,25 @@ import org.junit.Test
 
 class MeasurementProvenanceTest {
     @Test
-    fun measurementResultSourceIsPreservedInSavedReading() {
+    fun newMeasurementResultsAreSavedAsRealReadings() {
         val result = MeasurementResult(
             expectedConnectionType = ConnectionType.WIFI,
             observedConnectionType = ConnectionType.WIFI,
             measuredAtEpochMillis = 1L,
             status = MeasurementStatus.COMPLETE,
             packetLossMethod = PacketLossMethod.ICMP,
-            isDemo = true,
         )
 
-        assertTrue(result.toReading(sessionId = 7L, x = 1f, y = 2f).isDemo)
+        assertFalse(result.toReading(sessionId = 7L, x = 1f, y = 2f).isDemo)
     }
 
     @Test
-    fun entityMappersPreserveDemoAndLegacyRealSources() {
-        val demo = reading(1f, 2f).copy(isDemo = true).toEntity()
+    fun entityMappersPreserveLegacySimulatedAndRealSources() {
+        val legacySimulated = reading(1f, 2f).copy(isDemo = true).toEntity()
         val real = reading(2f, 3f).copy(isDemo = false).toEntity()
 
-        assertTrue(demo.isDemo)
-        assertTrue(demo.toDomain().isDemo)
+        assertTrue(legacySimulated.isDemo)
+        assertTrue(legacySimulated.toDomain().isDemo)
         assertFalse(real.isDemo)
         assertFalse(real.toDomain().isDemo)
     }

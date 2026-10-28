@@ -146,7 +146,7 @@ object SessionComparison {
             warnings += "The sessions have no shared sampled room areas; add readings in matching areas to compare them."
         }
         if (beforeInfo.hasDemo || afterInfo.hasDemo) {
-            warnings += "At least one session includes simulated demo readings; results are not field measurements."
+            warnings += "At least one session includes legacy simulated readings; results are not entirely field measurements."
         }
         if (beforeInfo.hasHttpPacketLoss || afterInfo.hasHttpPacketLoss) {
             warnings += "HTTP request-failure rates are application-level probes and are not compared as ICMP packet loss."

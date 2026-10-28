@@ -26,7 +26,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -74,7 +73,6 @@ import com.heatnet.ui.theme.statusGreen
 @Composable
 fun NewSessionScreen(container: AppContainer, onBack: () -> Unit, onContinue: (ConnectionType) -> Unit) {
     val context = LocalContext.current
-    val fake = container.useFakeMeasurements
 
     fun locationGranted() =
         context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -90,15 +88,15 @@ fun NewSessionScreen(container: AppContainer, onBack: () -> Unit, onContinue: (C
         hasLocation = WifiLocationPermissionPolicy.hasRequiredPermission(grants)
         onlyApproximate = WifiLocationPermissionPolicy.isApproximateOnly(grants)
         askedOnce = true
+        if (hasLocation) onContinue(ConnectionType.WIFI)
     }
 
     val snapshot by container.connectionMonitor.state.collectAsStateWithLifecycle()
-    // The connection the phone is really using right now (none in demo mode).
-    val active: ConnectionType? = if (fake) null else snapshot.connectionType
+    val active = snapshot.connectionType
     var chosen by rememberSaveable { mutableStateOf<ConnectionType?>(null) }
-    val selected: ConnectionType? = chosen ?: if (fake) ConnectionType.WIFI else active
-    val canMeasureSelected = selected != null && (fake || active == selected)
-    val needsLocation = !fake && selected == ConnectionType.WIFI && canMeasureSelected && !hasLocation
+    val selected: ConnectionType? = chosen ?: active
+    val canMeasureSelected = selected != null && active == selected
+    val needsLocation = canMeasureSelected && WifiLocationPermissionPolicy.shouldRequestFor(selected, hasLocation)
 
     AuroraBackground {
         Scaffold(
@@ -129,35 +127,27 @@ fun NewSessionScreen(container: AppContainer, onBack: () -> Unit, onContinue: (C
                 )
 
                 ConnectionType.entries.forEach { type ->
-                    val live = !fake && active == type
+                    val live = active == type
                     ConnectionOptionCard(
                         type = type,
                         selected = selected == type,
-                        statusText = when {
-                            fake -> "Demo"
-                            live -> "Connected now"
-                            else -> "Not active"
-                        },
-                        live = live || fake,
+                        statusText = if (live) "Connected now" else "Not active",
+                        live = live,
                         onClick = { chosen = type },
                     )
                 }
 
-                if (fake) {
-                    StatusPill("Demo mode: readings are simulated", dotColor = Brand.Amber)
-                } else {
-                    val note = when {
-                        !snapshot.hasTransportObservation -> "Checking your connection…"
-                        snapshot.network == null -> "You're not connected to a network."
-                        active == null -> "Your current connection isn't Wi-Fi or mobile data."
-                        selected != null && active != selected ->
-                            "You're on ${active.label} right now. Switch your phone to ${selected.label}, then continue."
-                        else -> null
-                    }
-                    note?.let {
-                        SurfaceCard(Modifier.fillMaxWidth(), container = MaterialTheme.colorScheme.secondaryContainer) {
-                            Text(it, style = MaterialTheme.typography.bodyMedium)
-                        }
+                val note = when {
+                    !snapshot.hasTransportObservation -> "Checking your connection…"
+                    snapshot.network == null -> "You're not connected to a network."
+                    active == null -> "Your current connection isn't Wi-Fi or mobile data."
+                    selected != null && active != selected ->
+                        "You're on ${active.label} right now. Switch your phone to ${selected.label}, then continue."
+                    else -> null
+                }
+                note?.let {
+                    SurfaceCard(Modifier.fillMaxWidth(), container = MaterialTheme.colorScheme.secondaryContainer) {
+                        Text(it, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
 
@@ -166,20 +156,18 @@ fun NewSessionScreen(container: AppContainer, onBack: () -> Unit, onContinue: (C
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("Location permission needed", style = MaterialTheme.typography.titleMedium)
                             Text(
-                                "Android only shares Wi-Fi details (signal strength, channel, access point) with apps " +
-                                    "that have location permission. HeatNet does not use your location.",
+                                "Android requires precise location permission to share Wi-Fi details such as signal, " +
+                                    "channel, and access point. HeatNet uses this permission for Wi-Fi information, " +
+                                    "not to determine your room position. Continue with Wi-Fi to request access.",
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                             if (onlyApproximate) {
                                 Text(
-                                    "You allowed only approximate location. Wi-Fi details need precise location: " +
-                                        "tap Allow location again and choose Precise.",
+                                    "Only approximate location was allowed. Wi-Fi details need precise access. " +
+                                        "Choose Precise in the system dialog, or change this app's permission in settings.",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.error,
                                 )
-                            }
-                            Button(onClick = { launcher.launch(WifiLocationPermissionPolicy.requestPermissions) }) {
-                                Text("Allow location")
                             }
                             if (askedOnce) {
                                 OutlinedButton(onClick = {
@@ -194,9 +182,21 @@ fun NewSessionScreen(container: AppContainer, onBack: () -> Unit, onContinue: (C
 
                 Spacer(Modifier.height(4.dp))
                 PrimaryButton(
-                    text = if (selected != null) "Continue with ${selected.label}" else "Choose a connection",
-                    onClick = { selected?.let(onContinue) },
-                    enabled = canMeasureSelected && !needsLocation,
+                    text = when {
+                        selected == null -> "Choose a connection"
+                        needsLocation -> "Allow precise location"
+                        else -> "Continue with ${selected.label}"
+                    },
+                    onClick = {
+                        selected?.let { type ->
+                            if (WifiLocationPermissionPolicy.shouldRequestFor(type, hasLocation)) {
+                                launcher.launch(WifiLocationPermissionPolicy.requestPermissions)
+                            } else {
+                                onContinue(type)
+                            }
+                        }
+                    },
+                    enabled = canMeasureSelected,
                 )
                 Spacer(Modifier.height(8.dp))
             }

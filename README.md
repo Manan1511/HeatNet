@@ -7,7 +7,7 @@ HeatNet is a native Android app for measuring Wi-Fi or mobile-data quality at po
 - Create a Wi-Fi or mobile-data session, draw a room outline, and set its scale using a measured wall.
 - Take network readings at room locations and view signal and internet-performance heatmaps.
 - Review weak spots, revisit saved sessions, and compare two sessions using shared room areas.
-- Use the home-screen **Demo mode** switch to explore the mapping flow with simulated readings. Demo readings are marked as simulated in saved data and comparison warnings.
+- Record real readings from the device's active network. The production app has no simulated-reading mode; readings saved as simulated by older app versions remain marked as legacy data.
 
 Heatmap colors between measured points are inverse-distance-weighted estimates. The interpolation does not model walls, doors, or furniture; the app fades estimated areas to distinguish them from nearby measurements.
 
@@ -64,7 +64,7 @@ The network-reading path is shown in the [HeatNet network reading diagram](docs/
 
 Each reading captures the active Android `Network` and whether it uses Wi-Fi or mobile data. The app then runs the probes over that captured network so a change in the device's default route does not silently mix transports within a reading.
 
-Wi-Fi radio details are read through a fresh Android Wi-Fi callback. Android requires precise location permission to expose these fields; HeatNet requests that permission to read Wi-Fi information and does not use it to locate the device. If permission or radio data is unavailable, those fields may be missing.
+Wi-Fi radio details are read through a fresh Android Wi-Fi callback. When you continue with a Wi-Fi session, Android asks for precise location permission so HeatNet can read Wi-Fi details such as signal, channel, and access point. HeatNet uses the permission for those Wi-Fi details; it uses the room position you tap and does not determine your position. Mobile-data sessions do not request this permission. If access is denied or radio data is unavailable, the reading may omit those fields.
 
 Internet measurements use replaceable defaults in `measurement/src/main/java/com/heatnet/measurement/model/MeasurementConfig.kt`:
 
@@ -77,4 +77,4 @@ Internet measurements use replaceable defaults in `measurement/src/main/java/com
 
 HTTP fallback is an application-level probe-failure rate, not a count of raw network packets lost. The app labels the measurement method accordingly. Throughput reflects end-to-end internet goodput, which depends on the test endpoint and the wider network; it is not a direct measurement of Wi-Fi link capacity. The default measurement deadline is 10 seconds, with a 4 MiB transfer budget per direction.
 
-Wi-Fi sessions need location permission for Android's Wi-Fi radio details. The app also declares network access/state permissions and `READ_BASIC_PHONE_STATE` for cellular network information. Sessions and readings are stored locally with Room; the project has no account or cloud-sync backend.
+Android does not show a runtime dialog for internet or network-state access; those are install-time permissions. `READ_BASIC_PHONE_STATE` is also non-dangerous and is used for cellular network type. The only runtime permission request is precise location, triggered when continuing with Wi-Fi because Android gates the Wi-Fi metadata used by HeatNet. Older simulated readings remain marked after a database migration, but new readings always come from the real measurement engine. Sessions and readings are stored locally with Room; the project has no account or cloud-sync backend.

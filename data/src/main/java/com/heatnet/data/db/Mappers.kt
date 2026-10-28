@@ -101,5 +101,4 @@ fun MeasurementResult.toReading(sessionId: Long, x: Float, y: Float) = Reading(
     wifiChannel = wifiChannel,
     bssid = bssid,
     networkType = networkType,
-    isDemo = isDemo,
 )

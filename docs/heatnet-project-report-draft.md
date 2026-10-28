@@ -72,7 +72,7 @@ The project targets Android 16 (API 36), uses Java/Kotlin bytecode target 17, an
 
 The debug app was installed and opened on a Pixel 7 API 36 emulator. The visible UI smoke check covered the home screen, connection selection, room outline drawing, and room-scale entry. The home screen was also observed in landscape after allowing Android 16 to resize the activity. Emulator results verify app wiring and navigation only; they do not verify physical Wi-Fi or cellular measurements.
 
-The final automated run passed **165 JVM tests and 9 instrumentation tests** (174 total; zero failures, errors, or skips), built the debug APK, and completed lint with **zero errors and 21 non-blocking warnings**. Warnings include newer API/dependency suggestions and minor Compose/resource recommendations. The project intentionally remains on the requested API 36 target. Gradle also reports an AGP project-import performance hint and deprecated features that will need review before Gradle 10.
+The current working-tree run passed **164 JVM tests and 9 API 36 emulator instrumentation tests** (173 total; zero failures, errors, or skips), built the debug APK, and completed lint with **zero errors, 20 warnings, and one hint** across the three modules. Warnings include API/dependency suggestions and Compose/resource recommendations. The project intentionally remains on the requested API 36 target. Gradle also reports an AGP project-import performance hint and deprecated features that will need review before Gradle 10.
 
 ## 6. Field-test results (pending)
 

@@ -3,10 +3,10 @@
 ## Before you start (5 minutes ahead)
 
 - [ ] Phone is on **one** connection (Wi-Fi is easiest). Do not switch it during the demo.
-- [ ] App is installed and opens. Location permission is **not** granted yet if you want to show the permission prompt, or granted if you want to skip it.
+- [ ] App is installed and opens. If you plan to map Wi-Fi, leave precise location permission ungranted so the first Wi-Fi session can show the permission prompt.
 - [ ] Phone is charged and screen timeout is long.
 - [ ] You know a room to map. A small room with a clear shape works best.
-- [ ] **Backup plan:** turn on Demo mode before you begin. If the network is bad during the review, the demo still works with simulated readings. Say so out loud ("this is demo mode").
+- [ ] Confirm internet access and the Cloudflare test endpoint before the presentation. If a reading is partial or blocked, explain what failed and show an already saved real session if available; do not invent readings.
 - [ ] Open the diagram `docs/network-reading.html` in a tab, in case you are asked how a reading works.
 
 ## The script
@@ -20,9 +20,9 @@
 1. Tap **Start a new map**.
 2. Point out the detected connection.
    > "The app detects Wi-Fi or mobile data and locks the session to it, because the two can't be compared."
-3. If the permission card appears, tap **Allow location**.
-   > "Android only shows Wi-Fi details to apps with location permission. We don't use your location."
-4. Tap **Continue**.
+3. If you selected Wi-Fi and permission is missing, tap **Allow precise location**. Android shows its permission dialog; approving it continues to room setup.
+   > "Android requires this permission to expose Wi-Fi radio details. HeatNet uses the details for this reading and does not use them to determine where I am in the room."
+4. If you selected mobile data, tap **Continue with Mobile data**; the app does not request Wi-Fi location permission.
 
 ### 3. Draw the room (30 seconds)
 
@@ -61,7 +61,7 @@ If you have two sessions of the same connection type:
 1. Go to **Saved sessions** and tap **Compare**.
 2. Pick two sessions. The button says how many more to pick.
 3. Show the side-by-side maps and the verdicts.
-   > "It only compares areas both sessions measured, and it warns if the comparison might be unfair, for example different rooms or demo data."
+   > "It only compares areas both sessions measured, and it warns if the comparison might be unfair, for example different rooms or legacy simulated data from an older app version."
 
 If you only have one session, say: "With two sessions of the same type, this screen compares before and after." Do not fake it.
 
@@ -75,7 +75,7 @@ If you only have one session, say: "With two sessions of the same type, this scr
 | --- | --- |
 | A reading says "blocked" | Say it out loud. It means no network, the wrong connection type, or missing permission. Fix it and measure again. |
 | A reading is "partial" | Say that some tests failed and the app keeps what it got. It never invents numbers. |
-| No internet in the room | Switch on **Demo mode** (Home screen) and say so clearly. |
+| No internet or test endpoint is unavailable | Explain that no live network result is available. Reopen an already saved real session if one exists; do not present invented values. |
 | The app crashes | Reopen it. Sessions are saved on the phone. Continue from **Saved sessions**. |
 | Compare is disabled | You need at least two saved sessions. |
 
@@ -84,4 +84,4 @@ If you only have one session, say: "With two sessions of the same type, this scr
 - Do not say the app was tested in several real rooms unless it was.
 - Do not call the HTTP fallback "packet loss". It's a failed-request rate.
 - Do not say the speed test measures Wi-Fi capacity. It measures internet speed to a public server.
-- If you use Demo mode, say it is simulated.
+- The official app takes live measurements only. Heatmap areas between measured dots are estimates.

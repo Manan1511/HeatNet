@@ -18,8 +18,10 @@ data class Session(
 )
 
 /**
- * One saved measurement. Same fields as the PRD data model plus the two contract additions from the
- * Member 1 design: [packetLossMethod] and [status]; [wifiBand] may also be "6".
+ * One saved measurement. [status] and [packetLossMethod] distinguish partial results and the type
+ * of loss measurement. [isDemo] remains only to identify simulated readings saved by older app
+ * versions; the official measurement flow creates real readings only. [wifiBand] may be "2.4", "5",
+ * or "6".
  * A null metric means that test failed or was not available.
  */
 data class Reading(

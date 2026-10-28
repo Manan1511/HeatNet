@@ -166,6 +166,6 @@ class SessionComparisonTest {
 
         val comparison = success(SessionComparison.compare(before, after))
 
-        assertTrue(comparison.warnings.any { it.contains("simulated demo readings") })
+        assertTrue(comparison.warnings.any { it.contains("legacy simulated readings") })
     }
 }

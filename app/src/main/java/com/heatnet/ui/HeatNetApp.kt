@@ -41,7 +41,6 @@ fun HeatNetApp(container: AppContainer) {
         NavHost(nav, startDestination = Routes.HOME) {
             composable(Routes.HOME) {
                 HomeScreen(
-                    container = container,
                     onNewSession = { nav.navigate(Routes.NEW_SESSION) },
                     onSavedSessions = { nav.navigate(Routes.SESSIONS) },
                 )

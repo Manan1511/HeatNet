@@ -1,6 +1,7 @@
 package com.heatnet.ui.screens
 
 import android.Manifest
+import com.heatnet.measurement.model.ConnectionType
 
 /** Runtime permission contract for reading Wi-Fi radio details on current Android releases. */
 internal object WifiLocationPermissionPolicy {
@@ -11,6 +12,9 @@ internal object WifiLocationPermissionPolicy {
 
     fun hasRequiredPermission(grants: Map<String, Boolean>): Boolean =
         grants[Manifest.permission.ACCESS_FINE_LOCATION] == true
+
+    fun shouldRequestFor(type: ConnectionType?, hasFineLocation: Boolean): Boolean =
+        type == ConnectionType.WIFI && !hasFineLocation
 
     fun isApproximateOnly(grants: Map<String, Boolean>): Boolean =
         !hasRequiredPermission(grants) && grants[Manifest.permission.ACCESS_COARSE_LOCATION] == true

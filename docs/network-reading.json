@@ -34,7 +34,7 @@
     { "id": "icmp-result", "from": "icmp", "to": "engine", "y": 412, "label": "ICMP loss from echo results; unavailable if probe cannot run", "variant": "return" },
     { "id": "fallback", "from": "engine", "to": "http", "y": 440, "label": "If ICMP has no replies and HTTP worked: fallback probes", "variant": "dashed" },
     { "id": "fallback-result", "from": "http", "to": "engine", "y": 468, "label": "Failed-request rate, method = HTTP", "variant": "return", "note": "Application-probe failures, not raw packet drops; without HTTP reachability the result is unavailable." },
-    { "id": "persist", "from": "engine", "to": "db", "y": 496, "label": "Save metrics, loss method, coordinates + demo flag; refresh map", "variant": "emphasis", "note": "Room stores source provenance. Heatmap interpolation estimates unsampled room points." }
+    { "id": "persist", "from": "engine", "to": "db", "y": 496, "label": "Save metrics, loss method + coordinates; refresh map", "variant": "emphasis", "note": "New readings come from the real network engine. The Room schema retains a legacy simulated-data marker only for readings saved by older app versions. Heatmap interpolation estimates unsampled room points." }
   ],
   "activations": [
     { "participant": "ui", "from": 156, "to": 508, "type": "frontend" },

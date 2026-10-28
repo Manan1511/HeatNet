@@ -14,7 +14,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -22,7 +21,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.heatnet.ui.AppContainer
 import com.heatnet.ui.theme.AuroraBackground
 import com.heatnet.ui.theme.Brand
 import com.heatnet.ui.theme.FlowingGradientText
@@ -31,10 +29,9 @@ import com.heatnet.ui.theme.HeatHero
 import com.heatnet.ui.theme.PrimaryButton
 import com.heatnet.ui.theme.SecondaryButton
 import com.heatnet.ui.theme.StatusPill
-import com.heatnet.ui.theme.SurfaceCard
 
 @Composable
-fun HomeScreen(container: AppContainer, onNewSession: () -> Unit, onSavedSessions: () -> Unit) {
+fun HomeScreen(onNewSession: () -> Unit, onSavedSessions: () -> Unit) {
     AuroraBackground {
         Scaffold(containerColor = Color.Transparent) { padding ->
             Column(
@@ -68,22 +65,6 @@ fun HomeScreen(container: AppContainer, onNewSession: () -> Unit, onSavedSession
                 Spacer(Modifier.height(4.dp))
                 Reveal(delayMillis = 400) { PrimaryButton("Start a new map", onNewSession) }
                 Reveal(delayMillis = 460) { SecondaryButton("Saved sessions", onSavedSessions, Modifier.fillMaxWidth()) }
-                Reveal(delayMillis = 520) { SurfaceCard(Modifier.fillMaxWidth()) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Demo mode", style = MaterialTheme.typography.titleSmall)
-                            Text(
-                                "Use made-up readings instead of real network tests.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Switch(
-                            checked = container.useFakeMeasurements,
-                            onCheckedChange = { container.useFakeMeasurements = it },
-                        )
-                    }
-                } }
                 Spacer(Modifier.height(8.dp))
             }
         }

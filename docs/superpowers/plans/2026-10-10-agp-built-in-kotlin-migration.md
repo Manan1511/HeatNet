@@ -51,8 +51,8 @@
 ### Verification results
 
 - `.\gradlew.bat help` and `.\gradlew.bat build --dry-run`: successful.
-- `.\gradlew.bat test assembleDebug connectedDebugAndroidTest lintDebug`: successful on 2026-10-28. There are 165 JVM tests and 9 instrumentation tests, with 0 failures, 0 errors, and 0 skipped. Room KSP completes and the debug APK is assembled at `app/build/outputs/apk/debug/app-debug.apk`.
-- Lint completes for `:measurement`, `:data`, and `:app` with 0 errors and 21 non-blocking warnings. These include newer SDK/dependency suggestions and minor Compose/resource recommendations; the app intentionally remains on API 36.
+- `.\gradlew.bat test assembleDebug connectedDebugAndroidTest lintDebug`: current working-tree verification on 2026-10-28 passed 164 JVM tests and 9 instrumentation tests, with 0 failures, 0 errors, and 0 skipped. Room KSP completes and the debug APK is assembled at `app/build/outputs/apk/debug/app-debug.apk`.
+- Lint completes for `:measurement`, `:data`, and `:app` with 0 errors, 20 warnings, and one hint. These include newer SDK/dependency suggestions and minor Compose/resource recommendations; the app intentionally remains on API 36.
 - The emulator smoke check reached the room setup flow and confirmed the home screen resizes in landscape after removal of the fixed portrait orientation.
 - Remaining non-blocking build notices: AGP's dependency-constraint import-performance hint and Gradle deprecations that will need review before Gradle 10. The removed Kotlin Android plugin/variant API warnings no longer appear.
 - Independent read-only review found no code defects or blockers.

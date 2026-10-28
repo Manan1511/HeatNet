@@ -3,14 +3,14 @@
 App name: **HeatNet**
 Course: Computer Networks (BACSE203), VIT Vellore
 Team: 3 people
-Status: Implemented; Android 16 automated checks pass; physical-device field validation remains
+Status: Implemented; Android 16 automated checks pass; physical-device field validation remains. The shipped app records real measurements only and has no simulated-reading mode.
 Deadline: Not provided
 
 ## Current project status (2026-10-28)
 
 - The app targets Android 16 / API 36, with minimum SDK 36. The team selected Cloudflare's configurable public speed-test endpoints as the initial HTTP targets.
 - The AGP built-in Kotlin migration builds successfully with Gradle 9.8.0 and AGP 9.4.1.
-- Verification passed on the latest `main`: 165 JVM tests and 9 API 36 emulator instrumentation tests, with no failures; the debug APK builds and lint reports no errors (21 non-blocking warnings remain).
+- Current working-tree verification (2026-10-28): 164 JVM tests and 9 API 36 emulator instrumentation tests passed with no failures or skips; the debug APK builds, and lint reports zero errors, 20 warnings, and one hint.
 - An emulator walkthrough reached the connection picker, room-outline drawing, and room-scale setup. The home screen also resized in landscape. This does not verify real network measurements or radio values.
 - Still to do: run the app on the team's physical Android 16 phones and test in at least three real rooms; record which readings are unavailable and tune heatmap/weak-spot thresholds from those results. The report draft is `docs/heatnet-project-report-draft.md` and deliberately has no invented field data.
 - The team deadline and prior Android experience were not supplied and remain unknown.
@@ -21,7 +21,7 @@ Deadline: Not provided
 
 Paste this whole file at the start of a session, then say what you are working on (for example "I'm Member 2, help me build the heatmap renderer"). The AI should treat sections 3 to 9 as decisions already made, not suggestions. If you want to change one, say so explicitly and update this file afterwards.
 
-**Quick summary for the AI:** A native Kotlin Android app. The user outlines a room, walks around, taps their position on the outline, and the app runs a short network test (speed, latency, packet loss) plus reads radio signal data. Each reading becomes a dot. The app fills the gaps with inverse distance weighting and draws a heatmap that fades out far from any real reading. Sessions are saved locally and two sessions of the same connection type can be compared side by side. The app flags weak spots automatically.
+**Quick summary for the AI:** A native Kotlin Android app. The user outlines a room, walks around, taps their position on the outline, and the app runs a short network test (speed, latency, ICMP echo loss or labeled HTTP request-failure rate) plus reads available radio data. Each real reading becomes a dot. The app fills the gaps with inverse distance weighting and draws a heatmap that fades out far from any real reading. Sessions are saved locally and two sessions of the same connection type can be compared side by side. The app flags weak spots automatically. The shipped app has no simulated-reading mode.
 
 ---
 
@@ -46,6 +46,7 @@ People know their Wi-Fi or mobile data is bad in some parts of a room but not wh
 - Floor plan image uploads
 - Multi-room or multi-floor maps
 - Mixing Wi-Fi and mobile data readings in one map
+- An in-app simulated/demo-reading mode; old saved simulated readings remain visibly marked for data compatibility
 - iOS or web versions
 
 ---
@@ -83,7 +84,7 @@ People know their Wi-Fi or mobile data is bad in some parts of a room but not wh
 ## 5. User flow
 
 1. Open app, tap **New session**.
-2. App detects connection type (Wi-Fi or mobile data) and shows it. Session is locked to that type.
+2. App detects connection type (Wi-Fi or mobile data) and shows it. Session is locked to that type. Continuing with Wi-Fi requests precise location permission for Wi-Fi radio details; approval proceeds to room setup. Mobile sessions do not request this permission.
 3. User draws the room outline by tapping corners, closes the shape, enters one wall length.
 4. User walks to a spot, taps that spot on the outline, presses **Measure**.
 5. App runs the test (5 to 10 seconds), places a coloured dot, updates the heatmap.
@@ -94,7 +95,7 @@ People know their Wi-Fi or mobile data is bad in some parts of a room but not wh
 **Edge cases to handle:**
 - Connection type changes mid-session: show a warning ("You've switched to mobile data. Readings from here won't match earlier ones.") and let the user end the session or return to the original connection.
 - No internet during a test: save the reading with failed flags rather than crashing; mark it clearly.
-- Location permission denied: explain why it is needed (Android requires it to read Wi-Fi details) and block Wi-Fi sessions until granted.
+- Wi-Fi location permission denied: explain that Android requires it for Wi-Fi radio details, provide an app-settings path after denial, and block Wi-Fi sessions until precise permission is granted. Mobile sessions remain available without it.
 - Fewer than 3 readings: do not draw a heatmap, ask for more points.
 
 ---
@@ -106,19 +107,19 @@ Every reading is one **Reading** record (data model in section 8).
 ### 6.1 Network test (both connection types)
 | Metric | How it is measured |
 |--------|--------------------|
-| Download speed (Mbps) | Download a fixed-size file from a public test endpoint (for example Cloudflare's speed test service) using 2 to 4 parallel connections, time it |
-| Upload speed (Mbps) | Same approach, uploading |
-| Latency (ms) | Time a small request about 10 times, record the average |
-| Jitter (ms) | Spread (standard deviation) of those latency samples |
-| Packet loss (%) | About 20 pings, count missing replies. Parse the system `ping` output. If ICMP is blocked, fall back to counting failed small HTTP requests as loss |
+| Download speed (Mbps) | Download up to 4 MiB from the configured public HTTPS endpoint using two parallel HTTP streams; time the combined payload |
+| Upload speed (Mbps) | Upload up to 4 MiB total to the configured public HTTPS endpoint using two parallel HTTP streams |
+| Latency (ms) | Time up to 10 zero-byte HTTPS requests and record the average of successful requests |
+| Jitter (ms) | Sample standard deviation of successful latency request timings |
+| Packet loss (%) | Try up to 20 ICMP echo probes and count missing replies. If ICMP cannot run or gets no replies, use up to 20 HTTP probes only if an earlier HTTP request succeeded; label the result as an application-level HTTP request-failure rate, not packet loss |
 
-Why parallel connections: one TCP connection often cannot fill a fast link, so a single stream under-reports speed.
+One reading has a shared ten-second deadline. Two streams per direction can use more of a fast link than one stream, but the result is still public-endpoint internet goodput, not Wi-Fi capacity.
 Known limitation: a public server means results depend on the internet beyond the user's Wi-Fi. Use the same server every time and keep tests short.
 
 ### 6.2 Wi-Fi sessions: radio data
 - Signal strength (RSSI, dBm)
 - Link speed (Mbps)
-- Frequency band (2.4 or 5 GHz) and channel
+- Frequency band (2.4, 5, or 6 GHz) and channel
 - BSSID of the connected access point
 
 ### 6.3 Mobile data sessions: radio data
@@ -151,12 +152,14 @@ data class Session(
     val name: String,
     val createdAt: Long,           // epoch millis
     val connectionType: ConnectionType,   // WIFI or MOBILE
-    val outline: List<PointF>,     // room polygon corners, in metres
+    val outline: List<Point>,      // room polygon corners, in metres
     val widthMetres: Float,        // bounding box, derived from outline
     val heightMetres: Float
 )
 
 enum class ConnectionType { WIFI, MOBILE }
+enum class MeasurementStatus { COMPLETE, PARTIAL, BLOCKED }
+enum class PacketLossMethod { ICMP, HTTP_PROBE_FAILURES, UNAVAILABLE }
 
 data class Reading(
     val id: Long,
@@ -164,17 +167,20 @@ data class Reading(
     val x: Float,                  // metres, inside outline
     val y: Float,
     val timestamp: Long,
+    val status: MeasurementStatus,
     val downloadMbps: Float?,      // null if the test failed
     val uploadMbps: Float?,
     val latencyMs: Float?,
     val jitterMs: Float?,
     val packetLossPct: Float?,
+    val packetLossMethod: PacketLossMethod,
     val signalDbm: Int?,           // Wi-Fi RSSI or cellular signal
     val linkSpeedMbps: Int?,       // Wi-Fi only
-    val wifiBand: String?,         // "2.4" or "5", Wi-Fi only
+    val wifiBand: String?,         // "2.4", "5", or "6", Wi-Fi only
     val wifiChannel: Int?,         // Wi-Fi only
     val bssid: String?,            // Wi-Fi only
-    val networkType: String?       // mobile only, e.g. "LTE", "NR"
+    val networkType: String?,      // mobile only, e.g. "LTE", "NR"
+    val isDemo: Boolean = false    // compatibility marker for simulated readings saved by old versions; new readings are false
 )
 ```
 
@@ -189,10 +195,10 @@ All coordinates are in **metres** inside the outline, not pixels. The UI convert
 - **Storage:** Room (local SQLite)
 - **Async:** Kotlin coroutines
 - **HTTP tests:** OkHttp
-- **Radio data:** `WifiManager` / `ConnectivityManager` for Wi-Fi, `TelephonyManager` for cellular
-- **Packet loss:** system `ping` via process execution, with HTTP fallback
-- **Permissions:** location (needed for Wi-Fi details), internet, network state. Check exact requirements per Android version during build, since they change between versions.
-- **Min SDK:** decide as a team, and test on the actual phones you own
+- **Radio data:** location-aware `ConnectivityManager.NetworkCallback` and `WifiInfo` for active Wi-Fi; `TelephonyManager` for cellular
+- **Packet loss:** system `ping` via process execution, with an explicitly labeled HTTP request-failure fallback
+- **Permissions:** precise location for Wi-Fi metadata (requested when continuing into a Wi-Fi session); internet/network access and `READ_BASIC_PHONE_STATE` are install-time permissions
+- **SDK:** `minSdk`, `targetSdk`, and `compileSdk` are 36 (Android 16)
 
 Reason for native Kotlin over React Native: reading signal data needs native APIs, and a bridge adds work for no benefit.
 
@@ -225,7 +231,7 @@ Owns everything that produces a `Reading`.
 - Latency, jitter, and packet loss tests (ping parsing, HTTP fallback)
 - Reading Wi-Fi data (RSSI, link speed, band, channel, BSSID) and cellular data (dBm, network type)
 - Permission handling
-- Exposes one function: `suspend fun takeReading(sessionType): Reading` (without x and y)
+- Returns one transient `MeasurementResult` from `suspend fun takeMeasurement(sessionType)`; the data layer adds session and tapped-position fields to create a saved `Reading`
 - Written explanation of how each metric is measured (this is the viva-critical part)
 
 ### Member 2: Map and UI
@@ -235,7 +241,7 @@ Owns everything the user sees while mapping.
 - IDW heatmap rendering with distance fade (F4)
 - Metric switcher and legend (F5)
 - Dots overlay, basic navigation between screens
-- Works against fake `Reading` data first, so it does not wait for Member 1
+- Used fake `Reading` data during development so it did not wait for Member 1; no fake-reading source ships in the app
 
 ### Member 3: Data, compare, and quality
 Owns storage, the extra features, and testing.
@@ -261,7 +267,7 @@ Fill in real dates once the deadline is known. Phases are in order, not necessar
 | Phase | What | Who |
 |-------|------|-----|
 | 1 | Set up the project, agree on the data model, create the repo, everyone's Android Studio working on a real phone | All |
-| 2 | Core pieces built separately: measurement engine, outline and dots with fake data, Room database | M1, M2, M3 |
+| 2 | Core pieces built separately: measurement engine, outline and dots tested with development-only fake data, Room database | M1, M2, M3 |
 | 3 | Integration: real readings flowing into the map and saved sessions | All |
 | 4 | Heatmap quality: IDW tuning, fading, legend, metric switcher | M2, M3 |
 | 5 | Compare mode (F7) | M3, with M2 for rendering |

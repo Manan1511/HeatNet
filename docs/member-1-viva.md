@@ -58,7 +58,7 @@ Unavailable and redacted values stay null and carry an issue. The library does n
 
 The library declares `INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, `ACCESS_FINE_LOCATION`, and `READ_BASIC_PHONE_STATE`. Wi-Fi radio data is gated on fine-location permission. Mobile measurements do not require the Wi-Fi location gate. `READ_BASIC_PHONE_STATE` supports reading the data network type; the design does not request the broader runtime `READ_PHONE_STATE` permission.
 
-`PermissionGate` reports whether permission is ready; it does not display a system dialog. The app Activity owns the permission prompt. `ConnectionMonitor` is shared app state, and the measurement engine does not stop it when a reading ends or is cancelled.
+`PermissionGate` reports whether permission is ready; it does not display a system dialog. The Compose `NewSessionScreen` requests fine and coarse location together when the user continues with Wi-Fi. If precise permission is granted, it immediately continues to room setup. Mobile sessions do not request location. Internet/network-state permissions and `READ_BASIC_PHONE_STATE` are non-dangerous install-time permissions, so Android does not show runtime dialogs for them. `ConnectionMonitor` is shared app state, and the measurement engine does not stop it when a reading ends or is cancelled.
 
 The engine verifies the requested transport, captures radio data, runs each probe under one deadline, and returns `COMPLETE`, `PARTIAL`, or `BLOCKED`. If a route changes, unfinished work is cancelled and completed values are retained. Caller cancellation is propagated so HTTP calls, the ping process, radio callbacks, and flow collection can clean up.
 
@@ -66,7 +66,7 @@ The engine verifies the requested transport, captures radio data, runs each prob
 
 `MeasurementResult` is a transient measurement object. It contains the expected and observed transport, timestamp, status, metric and radio values, packet-loss method, and issues. It deliberately contains no room coordinates, session identifier, or database behavior.
 
-When the app later creates its shared `Reading`, it should combine this result with the session and point identifiers owned by the mapping and persistence layers. Preserve `packetLossMethod` so screens and comparisons can distinguish ICMP from HTTP request failures. Preserve the `wifiBand` value `"6"` alongside the existing `"2.4"` and `"5"` values.
+`data/db/Mappers.kt` combines this result with the session and manually tapped point to create the saved `Reading`. It preserves `packetLossMethod` so screens and comparisons can distinguish ICMP from HTTP request failures. It preserves the `wifiBand` value `"6"` alongside `"2.4"` and `"5"`. New readings are always real engine results; the saved-data `isDemo` field remains only to mark simulated readings left by older versions.
 
 ## Limits to mention
 

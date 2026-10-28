@@ -79,7 +79,7 @@ class MappingViewModel(
         val type = session?.connectionType ?: return
         val current = snapshot.connectionType
         when {
-            source().isFake || !snapshot.hasTransportObservation || current == null -> Unit
+            !snapshot.hasTransportObservation || current == null -> Unit
             current == type -> {
                 switchedTo = null
                 warningDismissed = false

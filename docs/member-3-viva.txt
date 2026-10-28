@@ -8,7 +8,7 @@
 
 | Piece | What it does | Where |
 | --- | --- | --- |
-| Local storage | Saves sessions (outline, size, connection type) and readings (position, metrics, loss method, radio fields, status, demo flag) in Room. No server or account. | `data/.../db/` |
+| Local storage | Saves sessions (outline, size, connection type) and readings (position, metrics, loss method, radio fields, and status) in Room. A legacy marker identifies simulated readings saved by older versions; current app sessions create real measurements only. No server or account. | `data/.../db/` |
 | Repository | One entry point for the app: create session, add and delete readings, load, rename, delete. | `SessionRepository.kt` |
 | Session list | Saved sessions, with rename, delete and compare picking. | `app/.../SessionListScreen.kt` |
 | Weak-spot detection (F8) | Flags problem corners of the room and writes one sentence per corner. | `WeakSpotDetector.kt` |
@@ -44,7 +44,7 @@
   - the room sizes differ by more than 20%,
   - the sessions used different access points (BSSID),
   - the sessions have no shared sampled areas,
-  - any reading is simulated demo data,
+  - any reading is legacy simulated data from an older app version,
   - HTTP request-failure rates are present (they are not compared as ICMP loss).
 
 ## Likely questions
@@ -80,7 +80,7 @@ Network measurements are noisy. Small differences should not be reported as impr
 Wi-Fi and mobile data use different technologies and signal scales, so their numbers are not comparable.
 
 **11. What is `isDemo`?**
-A flag marking simulated readings from Demo mode, so they are never mistaken for field measurements. Comparison warns when any are included.
+It is a compatibility flag for simulated readings saved by older app versions. The current app has no demo-reading mode and creates new readings from its real measurement engine. Maps and comparisons keep warning users when older simulated readings are present.
 
 **12. What happens if a test failed at a spot?**
 The value is null and is ignored for that metric. The rest of the reading still counts.

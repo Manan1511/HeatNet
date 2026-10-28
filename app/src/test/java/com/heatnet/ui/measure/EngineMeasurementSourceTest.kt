@@ -11,19 +11,9 @@ import com.heatnet.measurement.permissions.PermissionOutcome
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class EngineMeasurementSourceTest {
-
-    @Test
-    fun isFakeIsFalse() {
-        val dependencies = createFakeDependencies()
-        val engine = MeasurementEngine(dependencies)
-        val source = EngineMeasurementSource(engine)
-
-        assertFalse(source.isFake)
-    }
 
     @Test
     fun measureDelegatesToEngineAndReturnsResult() = runBlocking {

@@ -8,7 +8,7 @@
 
 **Tech Stack:** Kotlin 2.3.21, Android Gradle Plugin 8.13.2, Gradle 8.13, JDK 17, Android API 36, coroutines 1.11.0, OkHttp 5.4.0, JUnit 4, AndroidX Test.
 
-> **Status reviewed 2026-10-28:** The measurement engine, host app, and tests described here are implemented. The original Task 1 toolchain details above are historical; the current build uses AGP 9.4.1 with built-in Kotlin and Gradle 9.8.0. Automated verification passes with 165 JVM tests and 9 API 36 instrumentation tests. Physical-device radio validation and the PRD's three-room field testing remain outstanding.
+> **Status reviewed 2026-10-28:** The measurement engine, host app, and tests described here are implemented. The original Task 1 toolchain details above are historical; the current build uses AGP 9.4.1 with built-in Kotlin and Gradle 9.8.0. Current working-tree verification passes with 164 JVM tests and 9 API 36 instrumentation tests. Physical-device radio validation and the PRD's three-room field testing remain outstanding.
 
 **Spec:** `docs/superpowers/specs/2026-10-06-heatnet-member-1-measurement-design.md`
 
@@ -152,7 +152,7 @@ Use `Float?` for throughput, latency, jitter, and loss fields to match the share
 - [x] **Step 1: Write the integration tests** for merged measurement permissions and app consumption of `MeasurementEngine`/`MeasurementResult`, including the HTTP-loss method and 6 GHz band.
 - [x] **Step 2: Run** `:app:connectedDebugAndroidTest` on the API 36 emulator; integration tests pass.
 - [x] **Step 3: Write** the viva guide covering throughput and parallel streams, HTTP latency and jitter, ICMP versus HTTP failure percentage, RSSI, Wi-Fi PHY rate versus internet throughput, bands/channels, mobile types, permissions, public-edge variability, the `MeasurementResult` to future `Reading` mapping, and the limits of emulator/physical readings (`docs/member-1-viva.md`).
-- [x] **Step 4: Run final automated checks** with `test assembleDebug connectedDebugAndroidTest lintDebug` on the API 36 emulator. Result: 165 JVM tests and 9 instrumentation tests pass; build succeeds and lint reports zero errors.
+- [x] **Step 4: Run final automated checks** with `test assembleDebug connectedDebugAndroidTest lintDebug` on the API 36 emulator. Current working-tree result: 164 JVM tests and 9 instrumentation tests pass; build succeeds and lint reports zero errors, 20 warnings, and one hint.
 - [ ] **Manual field validation remains:** use physical Android 16 phones to record Wi-Fi and mobile readings, then test at least three different rooms. Record unavailable fields and whether ICMP or HTTP fallback was used; emulator results are not substitutes for radio measurements.
 - [x] **Step 5: Review and commit** the viva guide (`7952eb3`). The PRD has since been updated with verified project status and remaining field work.
 

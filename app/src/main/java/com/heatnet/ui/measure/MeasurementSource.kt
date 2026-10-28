@@ -5,13 +5,8 @@ import com.heatnet.measurement.model.ConnectionType
 import com.heatnet.measurement.model.MeasurementProgress
 import com.heatnet.measurement.model.MeasurementResult
 
-/**
- * What the Measure button calls. The position is passed only so the fake source can make
- * believable values; Member 1's real engine ignores it (position is never measured, only tapped).
- */
+/** What the Measure button calls. Position is stored by the app; the network engine never infers it. */
 interface MeasurementSource {
-    val isFake: Boolean
-
     suspend fun measure(
         type: ConnectionType,
         xMetres: Float,
@@ -22,8 +17,6 @@ interface MeasurementSource {
 
 /** Member 1's real measurement engine. */
 class EngineMeasurementSource(private val engine: MeasurementEngine) : MeasurementSource {
-    override val isFake = false
-
     override suspend fun measure(
         type: ConnectionType,
         xMetres: Float,
